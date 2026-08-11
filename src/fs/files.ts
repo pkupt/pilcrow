@@ -123,6 +123,31 @@ export async function moveEntry(
   await deleteFile(root, srcPath);
 }
 
+export async function moveDirectory(
+  root: FileSystemDirectoryHandle,
+  srcPath: string,
+  destPath: string,
+): Promise<void> {
+  if (srcPath === destPath || destPath.startsWith(srcPath + '/')) return;
+  const srcDir = await getDir(root as DirHandle, srcPath, false);
+  const entries: { name: string; kind: 'file' | 'directory' }[] = [];
+  for await (const entry of srcDir.values()) {
+    entries.push({ name: entry.name, kind: entry.kind });
+  }
+  for (const entry of entries) {
+    const srcChild = `${srcPath}/${entry.name}`;
+    const destChild = `${destPath}/${entry.name}`;
+    if (entry.kind === 'directory') {
+      await moveDirectory(root, srcChild, destChild);
+    } else {
+      const content = await readFile(root, srcChild);
+      if (content === null) continue;
+      await writeFile(root, destChild, content);
+    }
+  }
+  await deleteDirectory(root, srcPath);
+}
+
 export async function getFileMtime(
   root: FileSystemDirectoryHandle,
   path: string,

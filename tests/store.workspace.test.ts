@@ -187,6 +187,23 @@ describe('workspace.moveFile', () => {
   });
 });
 
+describe('workspace.moveDirectory', () => {
+  it('moves a directory recursively and refreshes the tree', async () => {
+    const fs = await setup({ 'src/a.md': 'A', 'src/sub/b.md': 'B' });
+    await workspace.moveDirectory('src', 'notes/dst');
+    expect(fs.files.has('src/a.md')).toBe(false);
+    expect(fs.files.get('notes/dst/a.md')).toBe('A');
+    expect(fs.files.get('notes/dst/sub/b.md')).toBe('B');
+    expect(workspace.tree.value.map((n) => n.path)).toContain('notes/dst/a.md');
+  });
+
+  it('no-ops when no handle', async () => {
+    resetWorkspace();
+    await workspace.moveDirectory('src', 'notes/dst');
+    expect(workspace.tree.value).toEqual([]);
+  });
+});
+
 describe('workspace.runSearch', () => {
   it('stores search results', async () => {
     await setup({ 'a.md': 'hello world', 'b.md': 'nope' });
