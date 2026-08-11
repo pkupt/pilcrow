@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createMockFs } from './mocks/fs';
 import {
   readFile,
@@ -45,6 +45,39 @@ describe('writeFile', () => {
     const fs = createMockFs({});
     await writeFile(fs.handle, 'notes/sub/a.md', 'x');
     expect(fs.files.get('notes/sub/a.md')).toBe('x');
+  });
+
+  it('cleans up tmp file when the atomic move fails', async () => {
+    const fs = createMockFs({});
+    const handle = fs.handle as unknown as {
+      getFileHandle: (
+        name: string,
+        opts?: { create?: boolean },
+      ) => Promise<{
+        name: string;
+        move: (n: string) => Promise<void>;
+        createWritable: () => Promise<FileSystemWritableFileStream>;
+        getFile: () => Promise<File>;
+      }>;
+    };
+    const original = handle.getFileHandle.bind(handle);
+    vi.spyOn(handle, 'getFileHandle').mockImplementation(async (name, opts) => {
+      const fh = await original(name, opts);
+      if (name.startsWith('.')) {
+        return Object.create(fh, {
+          move: {
+            value: () =>
+              Promise.reject(new DOMException('move failed', 'InvalidStateError')),
+          },
+        });
+      }
+      return fh;
+    });
+    await expect(writeFile(fs.handle, 'a.md', 'content')).rejects.toMatchObject({
+      name: 'InvalidStateError',
+    });
+    expect(fs.files.has('.a.md.tmp')).toBe(false);
+    expect(fs.files.has('a.md')).toBe(false);
   });
 });
 
@@ -105,5 +138,21 @@ describe('exists', () => {
   it('returns false for missing file', async () => {
     const fs = createMockFs({});
     expect(await exists(fs.handle, 'missing.md')).toBe(false);
+  });
+
+  it('throws on SecurityError instead of returning false', async () => {
+    const fs = createMockFs({});
+    const handle = fs.handle as unknown as {
+      getFileHandle: (
+        name: string,
+        opts?: { create?: boolean },
+      ) => Promise<unknown>;
+    };
+    vi.spyOn(handle, 'getFileHandle').mockRejectedValue(
+      new DOMException('Blocked', 'SecurityError'),
+    );
+    await expect(exists(fs.handle, 'a.md')).rejects.toMatchObject({
+      name: 'SecurityError',
+    });
   });
 });
