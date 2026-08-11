@@ -1,7 +1,4 @@
 import { render } from 'preact';
-
-function App() {
-  return <div>md_rw</div>;
-}
+import { App } from './ui/App';
 
 render(<App />, document.getElementById('app')!);
