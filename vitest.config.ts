@@ -6,5 +6,6 @@ export default defineConfig({
     environmentOptions: {
       jsdom: { url: 'https://example.com/page' },
     },
+    setupFiles: ['./tests/setup.ts'],
   },
 });
