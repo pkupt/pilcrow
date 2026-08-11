@@ -35,7 +35,16 @@ parser.use(attrs);
 parser.use(frontMatter, () => {
   // front matter is parsed and discarded from body
 });
-parser.use(anchor, { permalink: false, slugify: (s: string) => s.toLowerCase().replace(/[^\w]+/g, '-') });
+parser.use(anchor, {
+  permalink: false,
+  slugify: (s: string) =>
+    s
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\u4e00-\u9fff-]/g, '')
+      .replace(/-+/g, '-'),
+});
 parser.use(container, 'note', {
   render(tokens: { info: string; nesting: number }[], idx: number) {
     if (tokens[idx].nesting === 1) {
