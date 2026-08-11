@@ -66,6 +66,18 @@ describe('parser', () => {
   });
 
   it('renders strikethrough', () => {
-    expect(parse('~~deleted~~')).toContain('del');
+    expect(parse('~~deleted~~')).toContain('<s>');
+  });
+
+  it('generates distinct ids for CJK headings', () => {
+    const html = parse('# 标题\n\n# 甲标题');
+    const ids = [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it('keeps CJK characters in heading ids', () => {
+    const html = parse('# 笔记');
+    expect(html).toMatch(/id="[^"]*[\u4e00-\u9fff][^"]*"/);
   });
 });
