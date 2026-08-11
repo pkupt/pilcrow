@@ -26,7 +26,7 @@ const common = {
   sourcemap: false,
   logLevel: 'info',
   legalComments: 'none',
-  loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css' },
+  loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css', '.ttf': 'file', '.woff': 'file', '.woff2': 'file' },
   jsx: 'automatic',
   jsxImportSource: 'preact',
   alias: { util: resolve(root, 'src/shims/util.ts') },
