@@ -14,6 +14,7 @@ import {
   deleteFile as fsDeleteFile,
   deleteDirectory as fsDeleteDirectory,
   moveEntry as fsMoveEntry,
+  getFileMtime,
 } from '../fs/files';
 import { updateReferences } from '../markdown/wikilinks';
 import { search as grepSearch, type SearchQuery } from '../search/grep';
@@ -22,6 +23,9 @@ export enum ConfirmResult {
   SAVE = 'save',
   DISCARD = 'discard',
   CANCEL = 'cancel',
+  KEEP_LOCAL = 'keep_local',     // for conflict
+  OVERWRITE = 'overwrite',       // for conflict
+  MANUAL_MERGE = 'manual_merge', // for conflict
 }
 
 export const workspace = {
@@ -29,6 +33,7 @@ export const workspace = {
   tree: signal<FileNode[]>([]),
   openFilePath: signal<string | null>(null),
   openFileContent: signal<string | null>(null),
+  openFileMtime: signal<number>(0),
   isDirty: signal<boolean>(false),
   recentFiles: signal<string[]>([]),
   searchOpen: signal<boolean>(false),
@@ -39,6 +44,7 @@ export const workspace = {
   confirmDirty: async (): Promise<ConfirmResult> => ConfirmResult.DISCARD,
   confirmReferences: async (_edits: { path: string; count: number }[]): Promise<boolean> => true,
   confirmDelete: async (_path: string): Promise<boolean> => true,
+  confirmConflict: async (): Promise<ConfirmResult> => ConfirmResult.KEEP_LOCAL,
 
   async openWorkspace(handle?: FileSystemDirectoryHandle): Promise<void> {
     let root = handle ?? (await loadHandle());
@@ -63,8 +69,10 @@ export const workspace = {
     }
     const content = await readFile(workspace.directoryHandle.value!, path);
     if (content === null) return;
+    const mtime = await getFileMtime(workspace.directoryHandle.value!, path);
     workspace.openFilePath.value = path;
     workspace.openFileContent.value = content;
+    workspace.openFileMtime.value = mtime ?? 0;
     workspace.isDirty.value = false;
     workspace.recentFiles.value = [path, ...workspace.recentFiles.value.filter((p) => p !== path)].slice(0, 20);
   },
@@ -78,12 +86,27 @@ export const workspace = {
 
   async saveCurrent(): Promise<void> {
     const path = workspace.openFilePath.value;
-    const savedContent = workspace.openFileContent.value;
-    if (path === null || savedContent === null) return;
-    await writeFile(workspace.directoryHandle.value!, path, savedContent);
-    if (workspace.openFileContent.value === savedContent) {
-      workspace.isDirty.value = false;
+    const content = workspace.openFileContent.value;
+    if (path === null || content === null) return;
+    const diskMtime = await getFileMtime(workspace.directoryHandle.value!, path);
+    if (diskMtime !== null && workspace.openFileMtime.value !== 0 && diskMtime !== workspace.openFileMtime.value) {
+      const choice = await workspace.confirmConflict();
+      if (choice === ConfirmResult.CANCEL) return;
+      if (choice === ConfirmResult.OVERWRITE) {
+        const diskContent = await readFile(workspace.directoryHandle.value!, path);
+        if (diskContent !== null) {
+          workspace.openFileContent.value = diskContent;
+          workspace.openFileMtime.value = diskMtime;
+          workspace.isDirty.value = false;
+        }
+        return;
+      }
+      // KEEP_LOCAL or MANUAL_MERGE -> proceed to write local content
     }
+    await writeFile(workspace.directoryHandle.value!, path, content);
+    workspace.isDirty.value = false;
+    const newMtime = await getFileMtime(workspace.directoryHandle.value!, path);
+    if (newMtime !== null) workspace.openFileMtime.value = newMtime;
     await refreshTree();
   },
 
@@ -173,6 +196,7 @@ export function resetWorkspace(): void {
   workspace.tree.value = [];
   workspace.openFilePath.value = null;
   workspace.openFileContent.value = null;
+  workspace.openFileMtime.value = 0;
   workspace.isDirty.value = false;
   workspace.recentFiles.value = [];
   workspace.searchOpen.value = false;

@@ -123,6 +123,21 @@ export async function moveEntry(
   await deleteFile(root, srcPath);
 }
 
+export async function getFileMtime(
+  root: FileSystemDirectoryHandle,
+  path: string,
+): Promise<number | null> {
+  const { dir, name } = splitPath(path);
+  try {
+    const d = await getDir(root as DirHandle, dir, false);
+    const fh = await d.getFileHandle(name);
+    const file = await fh.getFile();
+    return file.lastModified;
+  } catch {
+    return null;
+  }
+}
+
 export async function exists(
   root: FileSystemDirectoryHandle,
   path: string,
