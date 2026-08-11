@@ -19,26 +19,27 @@ export function EditorPane() {
       }
       return;
     }
-    if (handleRef.current) {
-      handleRef.current.update(content);
-      return;
+    if (!handleRef.current) {
+      handleRef.current = createEditor(parentRef.current, {
+        initialText: content,
+        theme: workspace.theme.value,
+        onDirty: () => {
+          if (!handleRef.current) return;
+          workspace.setContent(handleRef.current.getValue());
+          if (saveTimer) clearTimeout(saveTimer);
+          saveTimer = setTimeout(() => {
+            saveTimer = null;
+            void workspace.saveCurrent();
+          }, 1000);
+        },
+        onSave: () => {
+          if (saveTimer) clearTimeout(saveTimer);
+          if (!handleRef.current) return;
+          workspace.setContent(handleRef.current.getValue());
+          void workspace.saveCurrent();
+        },
+      });
     }
-    let isExternalUpdate = false;
-    handleRef.current = createEditor(parentRef.current, {
-      initialText: content,
-      theme: workspace.theme.value,
-      onDirty: () => {
-        if (isExternalUpdate) return;
-        if (!handleRef.current) return;
-        workspace.setContent(handleRef.current.getValue());
-      },
-      onSave: () => {
-        if (saveTimer) clearTimeout(saveTimer);
-        if (!handleRef.current) return;
-        workspace.setContent(handleRef.current.getValue());
-        void workspace.saveCurrent();
-      },
-    });
     return () => {
       if (handleRef.current) {
         handleRef.current.destroy();
