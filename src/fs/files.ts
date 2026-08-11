@@ -61,18 +61,21 @@ export async function writeFile(
   const { dir, name } = splitPath(path);
   const d = await getDir(root as DirHandle, dir, true);
   const tmpName = `.${name}.tmp`;
-  const tmpFh = await d.getFileHandle(tmpName, { create: true });
-  const w = await tmpFh.createWritable();
-  await w.write(content);
-  await w.close();
-  // Atomically replace: move tmp over target if move() available, else direct write.
-  if (typeof (tmpFh as { move?: unknown }).move === 'function') {
-    await (tmpFh as unknown as { move: (n: string) => Promise<void> }).move(name);
-  } else {
-    const fh = await d.getFileHandle(name, { create: true });
-    const w2 = await fh.createWritable();
-    await w2.write(content);
-    await w2.close();
+  try {
+    const tmpFh = await d.getFileHandle(tmpName, { create: true });
+    const w = await tmpFh.createWritable();
+    await w.write(content);
+    await w.close();
+    // Atomically replace: move tmp over target if move() available, else direct write.
+    if (typeof (tmpFh as { move?: unknown }).move === 'function') {
+      await (tmpFh as unknown as { move: (n: string) => Promise<void> }).move(name);
+    } else {
+      const fh = await d.getFileHandle(name, { create: true });
+      const w2 = await fh.createWritable();
+      await w2.write(content);
+      await w2.close();
+    }
+  } finally {
     await d.removeEntry(tmpName).catch(() => {});
   }
 }
@@ -129,7 +132,8 @@ export async function exists(
     const d = await getDir(root as DirHandle, dir, false);
     await d.getFileHandle(name);
     return true;
-  } catch {
-    return false;
+  } catch (e) {
+    if ((e as DOMException).name === 'NotFoundError') return false;
+    throw e;
   }
 }
