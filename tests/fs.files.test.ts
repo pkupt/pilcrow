@@ -9,6 +9,7 @@ import {
   deleteDirectory,
   moveEntry,
   exists,
+  getFileMtime,
 } from '../src/fs/files';
 
 describe('readFile', () => {
@@ -154,5 +155,18 @@ describe('exists', () => {
     await expect(exists(fs.handle, 'a.md')).rejects.toMatchObject({
       name: 'SecurityError',
     });
+  });
+});
+describe('getFileMtime', () => {
+  it('returns null for missing file', async () => {
+    const fs = createMockFs({});
+    expect(await getFileMtime(fs.handle, 'missing.md')).toBeNull();
+  });
+
+  it('returns a number for existing file', async () => {
+    const fs = createMockFs({ 'a.md': 'a' });
+    const mtime = await getFileMtime(fs.handle, 'a.md');
+    expect(typeof mtime).toBe('number');
+    expect(mtime).toBeGreaterThanOrEqual(0);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMockFs } from './mocks/fs';
 import { workspace, resetWorkspace, ConfirmResult } from '../src/store/workspace';
+import { ConfirmResult as ConflictResult } from '../src/store/workspace';
 
 vi.mock('../src/fs/directory', async (importOriginal) => {
   const mod = await importOriginal<typeof import('../src/fs/directory')>();
@@ -132,5 +133,45 @@ describe('workspace.runSearch', () => {
     });
     expect(results).toHaveLength(1);
     expect(results[0].path).toBe('a.md');
+  });
+});
+
+describe('workspace.saveCurrent conflict detection', () => {
+  it('saves when mtime matches', async () => {
+    const fs = await setup({ 'a.md': 'old' });
+    await workspace.openFile('a.md');
+    workspace.openFileContent.value = 'new';
+    workspace.isDirty.value = true;
+    await workspace.saveCurrent();
+    expect(fs.files.get('a.md')).toBe('new');
+    expect(workspace.isDirty.value).toBe(false);
+  });
+
+  it('prompts when disk mtime differs from open mtime', async () => {
+    const fs = await setup({ 'a.md': 'old' });
+    await workspace.openFile('a.md');
+    // Simulate external modification: bump disk mtime (and optionally content)
+    fs.files.set('a.md', 'external change');
+    fs.mtimes.set('a.md', 999);
+    workspace.openFileContent.value = 'local change';
+    workspace.isDirty.value = true;
+    const conflictSpy = vi.spyOn(workspace, 'confirmConflict').mockResolvedValue(ConflictResult.KEEP_LOCAL);
+    await workspace.saveCurrent();
+    expect(conflictSpy).toHaveBeenCalled();
+    expect(fs.files.get('a.md')).toBe('local change');
+    conflictSpy.mockRestore();
+  });
+
+  it('overwrites with disk version when user chooses OVERWRITE', async () => {
+    const fs = await setup({ 'a.md': 'old' });
+    await workspace.openFile('a.md');
+    fs.files.set('a.md', 'external change');
+    fs.mtimes.set('a.md', 999);
+    workspace.openFileContent.value = 'local change';
+    workspace.isDirty.value = true;
+    const conflictSpy = vi.spyOn(workspace, 'confirmConflict').mockResolvedValue(ConflictResult.OVERWRITE);
+    await workspace.saveCurrent();
+    expect(workspace.openFileContent.value).toContain('external change');
+    conflictSpy.mockRestore();
   });
 });

@@ -1,6 +1,7 @@
 export interface MockFs {
   handle: FileSystemDirectoryHandle;
   files: Map<string, string>;
+  mtimes: Map<string, number>;
 }
 
 class MockFileHandle {
@@ -12,7 +13,7 @@ class MockFileHandle {
   ) {}
   async getFile(): Promise<File> {
     const content = this.fs.files.get(this.path) ?? '';
-    return new File([content], this.name);
+    return new File([content], this.name, { lastModified: this.fs.mtimes.get(this.path) ?? 0 });
   }
   async createWritable(): Promise<FileSystemWritableFileStream> {
     const path = this.path;
@@ -27,6 +28,7 @@ class MockFileHandle {
       },
       async close(): Promise<void> {
         fs.files.set(path, buffer);
+        fs.mtimes.set(path, (fs.mtimes.get(path) ?? 0) + 1);
       },
     };
     return stream as unknown as FileSystemWritableFileStream;
@@ -97,7 +99,12 @@ class MockDirHandle {
 
 export function createMockFs(initial: Record<string, string> = {}): MockFs {
   const files = new Map<string, string>(Object.entries(initial));
-  const fs: MockFs = { handle: null as unknown as FileSystemDirectoryHandle, files };
+  const mtimes = new Map(Object.keys(initial).map((k) => [k, 1]));
+  const fs: MockFs = {
+    handle: null as unknown as FileSystemDirectoryHandle,
+    files,
+    mtimes,
+  };
   fs.handle = new MockDirHandle('', fs, '') as unknown as FileSystemDirectoryHandle;
   return fs;
 }
