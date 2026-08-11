@@ -1,0 +1,31 @@
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.pane {
+  min-width: 0;
+  overflow: auto;
+}
+
+.command-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border, #ddd);
+}
+
+.resizer {
+  flex: none;
+  width: 4px;
+  cursor: col-resize;
+  background: var(--border, #eee);
+}
