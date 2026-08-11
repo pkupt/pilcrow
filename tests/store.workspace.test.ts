@@ -22,6 +22,71 @@ async function setup(initial: Record<string, string> = {}) {
   return fs;
 }
 
+describe('store null-handle guards', () => {
+  it('no-ops createFile when no handle', async () => {
+    resetWorkspace();
+    const fs = createMockFs({});
+    await workspace.createFile('a.md');
+    expect(fs.files.has('a.md')).toBe(false);
+  });
+
+  it('no-ops createDirectory when no handle', async () => {
+    resetWorkspace();
+    await workspace.createDirectory('notes');
+    expect(workspace.tree.value).toEqual([]);
+  });
+
+  it('no-ops deleteFile when no handle', async () => {
+    resetWorkspace();
+    const delSpy = vi.spyOn(workspace, 'confirmDelete').mockResolvedValue(true);
+    await workspace.deleteFile('a.md');
+    expect(delSpy).not.toHaveBeenCalled();
+    delSpy.mockRestore();
+  });
+
+  it('no-ops moveFile when no handle', async () => {
+    resetWorkspace();
+    await workspace.moveFile('a.md', 'b.md');
+    expect(workspace.tree.value).toEqual([]);
+  });
+
+  it('no-ops saveCurrent when no handle', async () => {
+    resetWorkspace();
+    workspace.openFilePath.value = 'a.md';
+    workspace.openFileContent.value = 'x';
+    workspace.isDirty.value = true;
+    await workspace.saveCurrent();
+    expect(workspace.isDirty.value).toBe(true);
+  });
+
+  it('returns empty results from runSearch when no handle', async () => {
+    resetWorkspace();
+    const results = await workspace.runSearch({
+      pattern: 'x',
+      isRegex: false,
+      caseSensitive: false,
+      fileGlob: null,
+    });
+    expect(results).toEqual([]);
+  });
+});
+
+describe('workspace.openWorkspace permission failures', () => {
+  it('clears the handle and sets permissionError on NotAllowedError', async () => {
+    resetWorkspace();
+    const dirMod = await import('../src/fs/directory');
+    const loadSpy = vi.spyOn(dirMod, 'loadHandle').mockResolvedValue({
+      values: () => {
+        throw new DOMException('denied', 'NotAllowedError');
+      },
+    } as unknown as FileSystemDirectoryHandle);
+    await workspace.openWorkspace();
+    expect(workspace.directoryHandle.value).toBeNull();
+    expect(workspace.permissionError.value).toBe(true);
+    loadSpy.mockRestore();
+  });
+});
+
 describe('workspace.openWorkspace', () => {
   it('loads the tree', async () => {
     await setup({ 'a.md': 'a', 'b.md': 'b' });

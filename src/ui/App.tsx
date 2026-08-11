@@ -1,3 +1,4 @@
+import { useEffect } from 'preact/hooks';
 import { useSignal } from '@preact/signals';
 import { workspace } from '../store/workspace';
 import { FileTree } from './FileTree';
@@ -10,6 +11,10 @@ import './styles.css';
 export function App() {
   const treeWidth = useSignal(240);
   const editorWidth = useSignal(0.5);
+
+  useEffect(() => {
+    void workspace.openWorkspace().catch(() => {});
+  }, []);
 
   return (
     <ErrorBoundary>
@@ -40,6 +45,15 @@ export function App() {
             <PreviewPane />
           </section>
         </div>
+        {workspace.permissionError.value && (
+          <div class="regrant-overlay">
+            <div class="regrant-card">
+              <h1>Folder access required</h1>
+              <p>md_rw could not access your folder. Re-grant permission to continue.</p>
+              <button onClick={() => void workspace.openWorkspace()}>Re-grant access</button>
+            </div>
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );

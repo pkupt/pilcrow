@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/preact';
 
 afterEach(cleanup);
@@ -32,5 +32,28 @@ describe('App', () => {
     const btn = screen.getByRole('button', { name: /theme/i });
     btn.click();
     expect(workspace.theme.value).toBe('dark');
+  });
+
+  it('shows a select-folder button when no handle is set', () => {
+    resetWorkspace();
+    render(<App />);
+    expect(screen.getByRole('button', { name: /select folder/i })).toBeTruthy();
+  });
+
+  it('shows a re-grant screen when permission was denied', () => {
+    resetWorkspace();
+    workspace.permissionError.value = true;
+    render(<App />);
+    expect(screen.getByRole('button', { name: /re-grant access/i })).toBeTruthy();
+  });
+
+  it('select-folder button opens the workspace picker', () => {
+    resetWorkspace();
+    const openSpy = vi.spyOn(workspace, 'openWorkspace').mockResolvedValue(undefined);
+    render(<App />);
+    const btn = screen.getByRole('button', { name: /select folder/i });
+    btn.click();
+    expect(openSpy).toHaveBeenCalled();
+    openSpy.mockRestore();
   });
 });

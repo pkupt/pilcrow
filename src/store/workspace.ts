@@ -30,6 +30,7 @@ export enum ConfirmResult {
 
 export const workspace = {
   directoryHandle: signal<FileSystemDirectoryHandle | null>(null),
+  permissionError: signal<boolean>(false),
   tree: signal<FileNode[]>([]),
   openFilePath: signal<string | null>(null),
   openFileContent: signal<string | null>(null),
@@ -47,21 +48,36 @@ export const workspace = {
   confirmConflict: async (): Promise<ConfirmResult> => ConfirmResult.KEEP_LOCAL,
 
   async openWorkspace(handle?: FileSystemDirectoryHandle): Promise<void> {
-    let root = handle ?? (await loadHandle());
-    if (!root) {
-      root = await pickDirectory();
+    try {
+      let root = handle ?? (await loadHandle());
+      if (!root) {
+        root = await pickDirectory();
+      }
+      workspace.permissionError.value = false;
       await persistHandle(root);
-    } else {
-      await persistHandle(root);
+      workspace.directoryHandle.value = root;
+      await refreshTree();
+      workspace.openFilePath.value = null;
+      workspace.openFileContent.value = null;
+      workspace.isDirty.value = false;
+    } catch (e) {
+      const name = (e as DOMException | undefined)?.name;
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        workspace.directoryHandle.value = null;
+        workspace.permissionError.value = true;
+        workspace.tree.value = [];
+        workspace.openFilePath.value = null;
+        workspace.openFileContent.value = null;
+        workspace.isDirty.value = false;
+        return;
+      }
+      if (name === 'AbortError') return; // user cancelled the directory picker
+      throw e;
     }
-    workspace.directoryHandle.value = root;
-    await refreshTree();
-    workspace.openFilePath.value = null;
-    workspace.openFileContent.value = null;
-    workspace.isDirty.value = false;
   },
 
   async openFile(path: string): Promise<void> {
+    if (workspace.directoryHandle.value === null) return;
     if (workspace.isDirty.value && workspace.openFilePath.value !== null) {
       const result = await workspace.confirmDirty();
       if (result === ConfirmResult.CANCEL) return;
@@ -88,6 +104,7 @@ export const workspace = {
     const path = workspace.openFilePath.value;
     const content = workspace.openFileContent.value;
     if (path === null || content === null) return;
+    if (workspace.directoryHandle.value === null) return;
     const diskMtime = await getFileMtime(workspace.directoryHandle.value!, path);
     if (diskMtime !== null && workspace.openFileMtime.value !== 0 && diskMtime !== workspace.openFileMtime.value) {
       const choice = await workspace.confirmConflict();
@@ -111,17 +128,20 @@ export const workspace = {
   },
 
   async createFile(path: string): Promise<void> {
+    if (workspace.directoryHandle.value === null) return;
     await fsCreateFile(workspace.directoryHandle.value!, path);
     await refreshTree();
     await workspace.openFile(path);
   },
 
   async createDirectory(path: string): Promise<void> {
+    if (workspace.directoryHandle.value === null) return;
     await fsCreateDirectory(workspace.directoryHandle.value!, path);
     await refreshTree();
   },
 
   async deleteFile(path: string): Promise<void> {
+    if (workspace.directoryHandle.value === null) return;
     const confirmed = await workspace.confirmDelete(path);
     if (!confirmed) return;
     await fsDeleteFile(workspace.directoryHandle.value!, path);
@@ -134,6 +154,7 @@ export const workspace = {
   },
 
   async deleteDirectory(path: string): Promise<void> {
+    if (workspace.directoryHandle.value === null) return;
     const confirmed = await workspace.confirmDelete(path);
     if (!confirmed) return;
     await fsDeleteDirectory(workspace.directoryHandle.value!, path);
@@ -141,6 +162,7 @@ export const workspace = {
   },
 
   async moveFile(srcPath: string, destPath: string): Promise<void> {
+    if (workspace.directoryHandle.value === null) return;
     const tree = workspace.tree.value;
     const edits = await updateReferences(
       tree,
@@ -170,6 +192,10 @@ export const workspace = {
   },
 
   async runSearch(query: SearchQuery): Promise<SearchHit[]> {
+    if (workspace.directoryHandle.value === null) {
+      workspace.searchResults.value = [];
+      return [];
+    }
     const results = await grepSearch(query, workspace.tree.value, (p) =>
       readFile(workspace.directoryHandle.value!, p),
     );
@@ -187,12 +213,18 @@ export const workspace = {
 };
 
 async function refreshTree(): Promise<void> {
-  const tree = await listTree(workspace.directoryHandle.value!);
+  const handle = workspace.directoryHandle.value;
+  if (handle === null) {
+    workspace.tree.value = [];
+    return;
+  }
+  const tree = await listTree(handle);
   workspace.tree.value = tree;
 }
 
 export function resetWorkspace(): void {
   workspace.directoryHandle.value = null;
+  workspace.permissionError.value = false;
   workspace.tree.value = [];
   workspace.openFilePath.value = null;
   workspace.openFileContent.value = null;
