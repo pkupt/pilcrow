@@ -14,6 +14,7 @@ import {
   deleteFile as fsDeleteFile,
   deleteDirectory as fsDeleteDirectory,
   moveEntry as fsMoveEntry,
+  moveDirectory as fsMoveDirectory,
   getFileMtime,
 } from '../fs/files';
 import { updateReferences } from '../markdown/wikilinks';
@@ -188,6 +189,12 @@ export const workspace = {
     if (workspace.openFilePath.value === srcPath) {
       workspace.openFilePath.value = destPath;
     }
+    await refreshTree();
+  },
+
+  async moveDirectory(srcPath: string, destPath: string): Promise<void> {
+    if (workspace.directoryHandle.value === null) return;
+    await fsMoveDirectory(workspace.directoryHandle.value!, srcPath, destPath);
     await refreshTree();
   },
 

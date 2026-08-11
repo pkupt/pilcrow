@@ -8,6 +8,7 @@ import {
   deleteFile,
   deleteDirectory,
   moveEntry,
+  moveDirectory,
   exists,
   getFileMtime,
 } from '../src/fs/files';
@@ -127,6 +128,25 @@ describe('moveEntry', () => {
     await moveEntry(fs.handle, 'a.md', 'notes/b.md');
     expect(fs.files.has('a.md')).toBe(false);
     expect(fs.files.get('notes/b.md')).toBe('A');
+  });
+});
+
+describe('moveDirectory', () => {
+  it('moves a directory and all its entries recursively', async () => {
+    const fs = createMockFs({ 'src/a.md': 'A', 'src/sub/b.md': 'B', 'c.md': 'C' });
+    await moveDirectory(fs.handle, 'src', 'notes/dst');
+    expect(fs.files.has('src/a.md')).toBe(false);
+    expect(fs.files.has('src/sub/b.md')).toBe(false);
+    expect(fs.files.get('notes/dst/a.md')).toBe('A');
+    expect(fs.files.get('notes/dst/sub/b.md')).toBe('B');
+    expect(fs.files.get('c.md')).toBe('C');
+  });
+
+  it('does nothing when moving into itself', async () => {
+    const fs = createMockFs({ 'src/a.md': 'A' });
+    await moveDirectory(fs.handle, 'src', 'src/child');
+    expect(fs.files.get('src/a.md')).toBe('A');
+    expect(fs.files.get('src/child/a.md')).toBeUndefined();
   });
 });
 

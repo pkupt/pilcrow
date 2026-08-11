@@ -125,10 +125,15 @@ export function FileTree() {
                 e.preventDefault();
                 const src = e.dataTransfer?.getData('text/plain');
                 if (src && src !== node.path) {
+                  const draggedNode = tree.find((n) => n.path === src);
                   const dest = node.kind === 'directory'
                     ? `${node.path}/${src.split('/').pop()}`
                     : node.path;
-                  void workspace.moveFile(src, dest);
+                  if (draggedNode?.kind === 'directory') {
+                    void workspace.moveDirectory(src, dest);
+                  } else {
+                    void workspace.moveFile(src, dest);
+                  }
                 }
               }}
             >
