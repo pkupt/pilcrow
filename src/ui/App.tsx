@@ -6,6 +6,7 @@ import { EditorPane } from './EditorPane';
 import { PreviewPane } from './PreviewPane';
 import { CommandBar } from './CommandBar';
 import { ErrorBoundary } from './ErrorBoundary';
+import { DialogHost } from './Dialogs';
 import './styles.css';
 
 export function App() {
@@ -54,6 +55,7 @@ export function App() {
             </div>
           </div>
         )}
+        <DialogHost />
       </div>
     </ErrorBoundary>
   );
