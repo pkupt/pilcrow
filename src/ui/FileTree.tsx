@@ -50,6 +50,11 @@ export function FileTree() {
 
   const tree = workspace.tree.value;
   const flat = flatten(buildTree(tree), expanded.value);
+  const noHandle = workspace.directoryHandle.value === null;
+
+  const handleSelectFolder = () => {
+    void workspace.openWorkspace();
+  };
 
   const handleOpen = (node: FileNode) => {
     if (node.kind === 'file') {
@@ -97,36 +102,42 @@ export function FileTree() {
     <div class="file-tree" data-testid="file-tree">
       <div class="file-tree-header">
         <span>Files</span>
-        <button onClick={handleNewFile} title="New file">+</button>
+        <button onClick={handleNewFile} title="New file" disabled={noHandle}>+</button>
       </div>
-      <ul class="file-tree-list">
-        {flat.map((node) => (
-          <li
-            key={node.path}
-            class={`file-tree-item ${node.kind}`}
-            style={{ paddingLeft: `${8 + node.depth * 16}px` }}
-            onClick={() => handleOpen(node)}
-            onContextMenu={(e) => handleContextMenu(e, node)}
-            draggable
-            onDragStart={(e) => e.dataTransfer?.setData('text/plain', node.path)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              const src = e.dataTransfer?.getData('text/plain');
-              if (src && src !== node.path) {
-                if (node.kind === 'directory') {
-                  void workspace.moveFile(src, `${node.path}/${src.split('/').pop()}`);
-                } else {
-                  void workspace.moveFile(src, node.path);
+      {noHandle && flat.length === 0 ? (
+        <div class="file-tree-empty">
+          <p>No folder open.</p>
+          <button onClick={handleSelectFolder}>Select folder</button>
+        </div>
+      ) : (
+        <ul class="file-tree-list">
+          {flat.map((node) => (
+            <li
+              key={node.path}
+              class={`file-tree-item ${node.kind}`}
+              style={{ paddingLeft: `${8 + node.depth * 16}px` }}
+              onClick={() => handleOpen(node)}
+              onContextMenu={(e) => handleContextMenu(e, node)}
+              draggable
+              onDragStart={(e) => e.dataTransfer?.setData('text/plain', node.path)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const src = e.dataTransfer?.getData('text/plain');
+                if (src && src !== node.path) {
+                  const dest = node.kind === 'directory'
+                    ? `${node.path}/${src.split('/').pop()}`
+                    : node.path;
+                  void workspace.moveFile(src, dest);
                 }
-              }
-            }}
-          >
-            <span class="node-icon" aria-hidden="true">{node.kind === 'directory' ? '📁' : '📄'}</span>
-            <span class="node-name">{node.name}</span>
-          </li>
-        ))}
-      </ul>
+              }}
+            >
+              <span class="node-icon" aria-hidden="true">{node.kind === 'directory' ? '📁' : '📄'}</span>
+              <span class="node-name">{node.name}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       {contextMenu.value && (
         <div
           class="context-menu"
