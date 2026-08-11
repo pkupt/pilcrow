@@ -19,6 +19,7 @@ import {
 } from '../fs/files';
 import { updateReferences } from '../markdown/wikilinks';
 import { search as grepSearch, type SearchQuery } from '../search/grep';
+import { loadSettings, saveSettings } from './settings';
 
 export enum ConfirmResult {
   SAVE = 'save',
@@ -92,6 +93,7 @@ export const workspace = {
     workspace.openFileMtime.value = mtime ?? 0;
     workspace.isDirty.value = false;
     workspace.recentFiles.value = [path, ...workspace.recentFiles.value.filter((p) => p !== path)].slice(0, 20);
+    persistSettings();
   },
 
   setContent(content: string): void {
@@ -216,8 +218,19 @@ export const workspace = {
 
   setTheme(theme: Theme): void {
     workspace.theme.value = theme;
+    persistSettings();
   },
 };
+
+function persistSettings(): void {
+  saveSettings({ recentFiles: workspace.recentFiles.value, theme: workspace.theme.value });
+}
+
+export function initWorkspace(): void {
+  const settings = loadSettings();
+  workspace.recentFiles.value = settings.recentFiles;
+  workspace.theme.value = settings.theme;
+}
 
 async function refreshTree(): Promise<void> {
   const handle = workspace.directoryHandle.value;
