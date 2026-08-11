@@ -67,12 +67,17 @@ export function PreviewPane() {
   };
 
   if (workspace.openFileContent.value === null) {
-    return <div class="preview-pane-content empty"><p>no preview</p></div>;
+    return (
+      <div class="preview-pane-content empty" data-theme={workspace.theme.value}>
+        <p>no preview</p>
+      </div>
+    );
   }
 
   return (
     <div
       class="preview-pane-content"
+      data-theme={workspace.theme.value}
       ref={containerRef}
       onClick={handleClick}
     />

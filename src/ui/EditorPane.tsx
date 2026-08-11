@@ -46,7 +46,7 @@ export function EditorPane() {
         handleRef.current = null;
       }
     };
-  }, [workspace.openFilePath.value]);
+  }, [workspace.openFilePath.value, workspace.theme.value]);
 
   useSignalEffect(() => {
     if (!workspace.isDirty.value) return;
