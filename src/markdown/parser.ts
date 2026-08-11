@@ -23,7 +23,7 @@ export const parser: MarkdownIt = new MarkdownIt({
         // fall through
       }
     }
-    return `<pre class="hljs"><code>${parser.utils.escapeHtml(str)}</code></pre>`;
+    return `<pre class="hljs"><code${lang ? ` class="language-${lang}"` : ''}>${parser.utils.escapeHtml(str)}</code></pre>`;
   },
 });
 
