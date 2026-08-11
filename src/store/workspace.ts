@@ -78,10 +78,12 @@ export const workspace = {
 
   async saveCurrent(): Promise<void> {
     const path = workspace.openFilePath.value;
-    const content = workspace.openFileContent.value;
-    if (path === null || content === null) return;
-    await writeFile(workspace.directoryHandle.value!, path, content);
-    workspace.isDirty.value = false;
+    const savedContent = workspace.openFileContent.value;
+    if (path === null || savedContent === null) return;
+    await writeFile(workspace.directoryHandle.value!, path, savedContent);
+    if (workspace.openFileContent.value === savedContent) {
+      workspace.isDirty.value = false;
+    }
     await refreshTree();
   },
 
