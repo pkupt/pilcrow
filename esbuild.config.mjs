@@ -26,9 +26,10 @@ const common = {
   sourcemap: false,
   logLevel: 'info',
   legalComments: 'none',
-  loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'text' },
+  loader: { '.tsx': 'tsx', '.ts': 'ts', '.css': 'css' },
   jsx: 'automatic',
   jsxImportSource: 'preact',
+  alias: { util: resolve(root, 'src/shims/util.ts') },
 };
 
 async function copyStatic() {
