@@ -142,6 +142,49 @@ describe('App', () => {
     await new Promise((r) => setTimeout(r, 0));
     expect(treePane.style.width).toBe('120px');
   });
+
+  it('renders back/forward buttons disabled when no history', () => {
+    resetWorkspace();
+    render(<App />);
+    const back = screen.getByRole('button', { name: /back/i });
+    const fwd = screen.getByRole('button', { name: /forward/i });
+    expect((back as HTMLButtonElement).disabled).toBe(true);
+    expect((fwd as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('enables back after opening two files and navigates', async () => {
+    resetWorkspace();
+    workspace.directoryHandle.value = {} as FileSystemDirectoryHandle;
+    workspace.navHistory.value = ['a.md', 'b.md'];
+    workspace.navIndex.value = 1;
+    const goBackSpy = vi.spyOn(workspace, 'goBack').mockResolvedValue(undefined);
+    render(<App />);
+    const back = screen.getByRole('button', { name: /back/i }) as HTMLButtonElement;
+    expect(back.disabled).toBe(false);
+    back.click();
+    expect(goBackSpy).toHaveBeenCalled();
+    goBackSpy.mockRestore();
+  });
+
+  it('History dropdown lists recentFiles and opens on click', async () => {
+    resetWorkspace();
+    workspace.directoryHandle.value = {} as FileSystemDirectoryHandle;
+    workspace.recentFiles.value = ['a.md', 'b.md'];
+    const openSpy = vi.spyOn(workspace, 'openFile').mockResolvedValue(undefined);
+    render(<App />);
+    screen.getByRole('button', { name: /history/i }).click();
+    const item = await screen.findByText('a.md');
+    item.click();
+    expect(openSpy).toHaveBeenCalledWith('a.md');
+    openSpy.mockRestore();
+  });
+
+  it('History dropdown shows empty state when no history', async () => {
+    resetWorkspace();
+    render(<App />);
+    screen.getByRole('button', { name: /history/i }).click();
+    expect(await screen.findByText(/no history/i)).toBeTruthy();
+  });
 });
 
 function firePointerDrag(el: HTMLElement, dx: number): void {
