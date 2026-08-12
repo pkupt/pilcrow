@@ -47,6 +47,17 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /re-grant access/i })).toBeTruthy();
   });
 
+  it('re-grant button calls workspace.reGrantAccess', () => {
+    resetWorkspace();
+    const grantSpy = vi.spyOn(workspace, 'reGrantAccess').mockResolvedValue(undefined);
+    workspace.permissionError.value = true;
+    render(<App />);
+    const btn = screen.getByRole('button', { name: /re-grant access/i });
+    btn.click();
+    expect(grantSpy).toHaveBeenCalled();
+    grantSpy.mockRestore();
+  });
+
   it('select-folder button opens the workspace picker', () => {
     resetWorkspace();
     const openSpy = vi.spyOn(workspace, 'openWorkspace').mockResolvedValue(undefined);

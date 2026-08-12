@@ -113,6 +113,16 @@ export async function updateReferences(
           if (replaced !== fullMatch) {
             replacements.push({ match: fullMatch, replace: replaced });
           }
+        } else {
+          const norm = linkPath.replace(/^\.\//, '');
+          if (norm.startsWith(oldPath + '/')) {
+            // A link targeting a file inside a moved directory: rewrite the dir prefix.
+            const prefix = linkPath.startsWith('./') ? './' : '';
+            const newLink = prefix + newPath + norm.slice(oldPath.length);
+            if (newLink !== linkPath) {
+              replacements.push({ match: fullMatch, replace: fullMatch.replace(linkPath, newLink) });
+            }
+          }
         }
       }
     }

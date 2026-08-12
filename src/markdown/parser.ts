@@ -37,13 +37,17 @@ parser.use(frontMatter, () => {
 });
 parser.use(anchor, {
   permalink: false,
-  slugify: (s: string) =>
-    s
+  slugify: (s: string) => {
+    const slug = s
       .toLowerCase()
       .trim()
       .replace(/\s+/g, '-')
       .replace(/[^\w\u4e00-\u9fff-]/g, '')
-      .replace(/-+/g, '-'),
+      .replace(/-+/g, '-');
+    // Punctuation-only headings slugify to ''; fall back to a stable token so the
+    // id is non-empty (markdown-it-anchor dedupes repeats with -1, -2, ...).
+    return slug.length > 0 ? slug : 'section';
+  },
 });
 parser.use(container, 'note', {
   render(tokens: { info: string; nesting: number }[], idx: number) {

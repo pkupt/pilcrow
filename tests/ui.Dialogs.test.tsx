@@ -58,4 +58,17 @@ describe('DialogHost', () => {
     fireEvent.click(screen.getByText('Cancel'));
     await expect(p).resolves.toBe(false);
   });
+
+  it('serializes overlapping dialogs so each resolves in order', async () => {
+    render(<DialogHost />);
+    const p1 = workspace.confirmDirty();
+    const p2 = workspace.confirmConflict();
+    await waitFor(() => expect(screen.getByText('Unsaved changes')).toBeTruthy());
+    expect(screen.queryByText('File changed on disk')).toBeNull();
+    fireEvent.click(screen.getByText('Discard'));
+    await expect(p1).resolves.toBe(ConfirmResult.DISCARD);
+    await waitFor(() => expect(screen.getByText('File changed on disk')).toBeTruthy());
+    fireEvent.click(screen.getByText('Overwrite'));
+    await expect(p2).resolves.toBe(ConfirmResult.OVERWRITE);
+  });
 });

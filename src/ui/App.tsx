@@ -51,7 +51,7 @@ export function App() {
             <div class="regrant-card">
               <h1>Folder access required</h1>
               <p>md_rw could not access your folder. Re-grant permission to continue.</p>
-              <button onClick={() => void workspace.openWorkspace()}>Re-grant access</button>
+              <button onClick={() => void workspace.reGrantAccess()}>Re-grant access</button>
             </div>
           </div>
         )}

@@ -8,4 +8,5 @@ interface FileSystemDirectoryHandle {
   keys(): AsyncIterableIterator<string>;
   entries(): AsyncIterableIterator<[string, FileSystemHandle]>;
   [Symbol.asyncIterator](): AsyncIterableIterator<[string, FileSystemHandle]>;
+  requestPermission(descriptor?: { mode?: 'read' | 'readwrite' }): Promise<PermissionState>;
 }
