@@ -9,9 +9,46 @@ import { ErrorBoundary } from './ErrorBoundary';
 import { DialogHost } from './Dialogs';
 import './styles.css';
 
+const TREE_MIN = 120;
+const TREE_MAX = 480;
+const EDITOR_MIN = 0.15;
+const EDITOR_MAX = 0.85;
+
 export function App() {
   const treeWidth = useSignal(240);
   const editorWidth = useSignal(0.5);
+
+  const startTreeDrag = (e: PointerEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = treeWidth.value;
+    const onMove = (ev: PointerEvent) => {
+      treeWidth.value = Math.min(TREE_MAX, Math.max(TREE_MIN, startWidth + (ev.clientX - startX)));
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
+  const startEditorDrag = (e: PointerEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startRatio = editorWidth.value;
+    const onMove = (ev: PointerEvent) => {
+      const total = document.querySelector('.app-body')?.clientWidth || window.innerWidth;
+      const next = startRatio + (ev.clientX - startX) / total;
+      editorWidth.value = Math.min(EDITOR_MAX, Math.max(EDITOR_MIN, next));
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
   useEffect(() => {
     void workspace.openWorkspace().catch(() => {});
@@ -29,7 +66,7 @@ export function App() {
           >
             <FileTree />
           </aside>
-          <div class="resizer" data-resize="tree" />
+          <div class="resizer" data-resize="tree" onPointerDown={startTreeDrag} />
           <section
             class="pane editor-pane"
             data-pane="editor"
@@ -37,7 +74,7 @@ export function App() {
           >
             <EditorPane />
           </section>
-          <div class="resizer" data-resize="editor" />
+          <div class="resizer" data-resize="editor" onPointerDown={startEditorDrag} />
           <section
             class="pane preview-pane"
             data-pane="preview"

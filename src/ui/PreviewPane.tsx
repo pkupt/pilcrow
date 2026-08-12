@@ -1,5 +1,5 @@
 import { useRef } from 'preact/hooks';
-import { useSignal, useSignalEffect } from '@preact/signals';
+import { useSignalEffect } from '@preact/signals';
 import { workspace } from '../store/workspace';
 import { renderToHtml, renderMermaidBlocks } from '../markdown/render';
 import { resolveWikilink } from '../markdown/wikilinks';
@@ -9,29 +9,25 @@ let renderTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function PreviewPane() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const html = useSignal<string>('');
 
   useSignalEffect(() => {
     if (renderTimer) clearTimeout(renderTimer);
     const content = workspace.openFileContent.value;
+    const el = containerRef.current;
     if (content === null) {
-      html.value = '';
+      el && (el.innerHTML = '');
       return;
     }
     if (content.length > MAX_PREVIEW_BYTES) {
-      html.value = '<div class="preview-too-large">File too large, preview disabled.</div>';
+      el && (el.innerHTML = '<div class="preview-too-large">File too large, preview disabled.</div>');
       return;
     }
     renderTimer = setTimeout(() => {
-      html.value = renderToHtml(content);
+      const target = containerRef.current;
+      if (!target) return;
+      target.innerHTML = renderToHtml(content);
+      void renderMermaidBlocks(target);
     }, 250);
-  });
-
-  useSignalEffect(() => {
-    const el = containerRef.current;
-    if (!el || !html.value) return;
-    el.innerHTML = html.value;
-    void renderMermaidBlocks(el);
   });
 
   const handleClick = (e: MouseEvent) => {

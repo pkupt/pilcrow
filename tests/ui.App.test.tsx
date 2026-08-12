@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/preact';
 
 afterEach(cleanup);
-import { resetWorkspace, workspace } from '../src/store/workspace';
+import { resetWorkspace, workspace, ConfirmResult } from '../src/store/workspace';
 import { App } from '../src/ui/App';
 
 describe('App', () => {
@@ -67,4 +67,98 @@ describe('App', () => {
     expect(openSpy).toHaveBeenCalled();
     openSpy.mockRestore();
   });
+
+  it('Open button in the command bar switches the workspace folder', () => {
+    resetWorkspace();
+    const openSpy = vi.spyOn(workspace, 'openWorkspace').mockResolvedValue(undefined);
+    render(<App />);
+    const btn = screen.getByRole('button', { name: /open folder/i });
+    btn.click();
+    expect(openSpy).toHaveBeenCalled();
+    openSpy.mockRestore();
+  });
+
+  it('Open button forces the picker even when a handle is persisted', async () => {
+    resetWorkspace();
+    const pickerSpy = vi.spyOn(workspace, 'openWorkspace').mockResolvedValue(undefined);
+    render(<App />);
+    const btn = screen.getByRole('button', { name: /open folder/i });
+    btn.click();
+    expect(pickerSpy).toHaveBeenCalledWith(undefined, true);
+    pickerSpy.mockRestore();
+  });
+
+  it('Open button does not switch when dirty edits are cancelled', async () => {
+    resetWorkspace();
+    workspace.openFilePath.value = 'a.md';
+    workspace.openFileContent.value = 'edit';
+    workspace.isDirty.value = true;
+    const openSpy = vi.spyOn(workspace, 'openWorkspace').mockResolvedValue(undefined);
+    const confirmSpy = vi.spyOn(workspace, 'confirmDirty').mockResolvedValue(ConfirmResult.CANCEL);
+    render(<App />);
+    const btn = screen.getByRole('button', { name: /open folder/i });
+    btn.click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    openSpy.mockRestore();
+    confirmSpy.mockRestore();
+  });
+
+  it('tree resizer drag changes the tree pane width', async () => {
+    resetWorkspace();
+    const { container } = render(<App />);
+    const resizer = container.querySelector('[data-resize="tree"]') as HTMLDivElement;
+    const treePane = container.querySelector('[data-pane="tree"]') as HTMLElement;
+    expect(treePane.style.width).toBe('240px');
+    firePointerDrag(resizer, 40);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(treePane.style.width).toBe('280px');
+  });
+
+  it('editor resizer drag changes editor/preview split', async () => {
+    resetWorkspace();
+    const { container } = render(<App />);
+    const body = container.querySelector('.app-body') as HTMLElement;
+    Object.defineProperty(body, 'clientWidth', { configurable: true, get: () => 800 });
+    const resizer = container.querySelector('[data-resize="editor"]') as HTMLDivElement;
+    const editorPane = container.querySelector('[data-pane="editor"]') as HTMLElement;
+    const previewPane = container.querySelector('[data-pane="preview"]') as HTMLElement;
+    expect(editorPane.style.flex).toBe('0.5 1 0px');
+    firePointerDragEditor(resizer, 200);
+    await new Promise((r) => setTimeout(r, 0));
+    const ratio = parseFloat(editorPane.style.flex.split(' ')[0]);
+    expect(ratio).toBeCloseTo(0.75, 5);
+    const previewRatio = parseFloat(previewPane.style.flex.split(' ')[0]);
+    expect(previewRatio).toBeCloseTo(0.25, 5);
+  });
+
+  it('resizer clamps widths to sane bounds', async () => {
+    resetWorkspace();
+    const { container } = render(<App />);
+    const resizer = container.querySelector('[data-resize="tree"]') as HTMLDivElement;
+    const treePane = container.querySelector('[data-pane="tree"]') as HTMLElement;
+    firePointerDrag(resizer, -5000);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(treePane.style.width).toBe('120px');
+  });
 });
+
+function firePointerDrag(el: HTMLElement, dx: number): void {
+  const w = 4;
+  el.getBoundingClientRect = () =>
+    ({ left: 244, top: 0, right: 248, bottom: 800, width: w, height: 800, x: 244, y: 0, toJSON: () => ({}) }) as DOMRect;
+  const startX = 246;
+  el.dispatchEvent(new PointerEvent('pointerdown', { clientX: startX, bubbles: true, cancelable: true }));
+  window.dispatchEvent(new PointerEvent('pointermove', { clientX: startX + dx, bubbles: true }));
+  window.dispatchEvent(new PointerEvent('pointerup', { clientX: startX + dx, bubbles: true }));
+}
+
+function firePointerDragEditor(el: HTMLElement, dx: number): void {
+  const w = 4;
+  el.getBoundingClientRect = () =>
+    ({ left: 640, top: 0, right: 644, bottom: 800, width: w, height: 800, x: 640, y: 0, toJSON: () => ({}) }) as DOMRect;
+  el.dispatchEvent(new PointerEvent('pointerdown', { clientX: 642, bubbles: true, cancelable: true }));
+  window.dispatchEvent(new PointerEvent('pointermove', { clientX: 642 + dx, bubbles: true }));
+  window.dispatchEvent(new PointerEvent('pointerup', { clientX: 642 + dx, bubbles: true }));
+}
