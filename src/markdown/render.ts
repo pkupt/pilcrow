@@ -23,16 +23,49 @@ const ALLOWED_ATTR = [
   'colspan', 'rowspan', 'type', 'checked', 'disabled',
   'target', 'rel',
   'data-*',
+  // KaTeX (and some plugins) position their internals via inline styles
+  // (strut heights, fraction lines, sqrt, mspace). DOMPurify sanitizes the
+  // style value itself, so allowing the attribute is safe.
+  'style',
   'viewBox', 'fill', 'stroke', 'stroke-width', 'd', 'cx', 'cy', 'r', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height', 'points', 'transform',
   'xmlns', 'encoding',
 ];
 
 export function renderToHtml(markdown: string): string {
+  installStyleSanitizer();
   const raw = parse(markdown);
   return DOMPurify.sanitize(raw, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
     ALLOW_DATA_ATTR: true,
+  });
+}
+
+// DOMPurify keeps harmless positional styles (KaTeX) but does not strip
+// javascript: URLs embedded in CSS url() values. Explicitly drop them.
+const DANGEROUS_URL_RE = /(url\(\s*['"]?(?:javascript|data:text\/html|vbscript)\s*:|expression\(|@import\s)/i;
+const ALLOWED_URL_RE = /^(https?:|mailto:|data:image\/|#|\/|\.)/i;
+let hookInstalled = false;
+
+function installStyleSanitizer(): void {
+  if (hookInstalled) return;
+  hookInstalled = true;
+  DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (node.nodeName !== 'A' && node.nodeName !== 'DIV' && node.nodeName !== 'SPAN') return;
+    const style = node.getAttribute('style');
+    if (!style) return;
+    const cleaned = style
+      .split(';')
+      .map((decl) => decl.trim())
+      .filter((decl) => {
+        if (!decl) return true;
+        if (DANGEROUS_URL_RE.test(decl)) return false;
+        const urlMatch = decl.match(/url\(\s*['"]?([^'")]+)['"]?\s*\)/);
+        if (urlMatch && !ALLOWED_URL_RE.test(urlMatch[1])) return false;
+        return true;
+      })
+      .join(';');
+    node.setAttribute('style', cleaned);
   });
 }
 

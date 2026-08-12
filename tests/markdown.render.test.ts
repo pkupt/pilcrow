@@ -42,6 +42,18 @@ describe('renderToHtml', () => {
     const html = renderToHtml('```mermaid\ngraph TD; A-->B\n```');
     expect(html).toContain('mermaid');
   });
+
+  it('keeps inline style attributes for KaTeX positioning', () => {
+    const html = renderToHtml('$x^2 + \\frac{1}{2}$');
+    expect(html).toMatch(/style=/);
+  });
+
+  it('still sanitizes dangerous styles from allowed style attr', () => {
+    const md = '[x](http://example.com){style="background:url(javascript:alert(1));color:red"}';
+    const html = renderToHtml(md);
+    expect(html).not.toMatch(/javascript:/i);
+    expect(html).toMatch(/color:\s*red/i);
+  });
 });
 
 describe('renderMermaidBlocks', () => {

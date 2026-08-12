@@ -66,10 +66,13 @@ export const workspace = {
   confirmDelete: async (_path: string): Promise<boolean> => true,
   confirmConflict: async (): Promise<ConfirmResult> => ConfirmResult.KEEP_LOCAL,
 
-  async openWorkspace(handle?: FileSystemDirectoryHandle): Promise<void> {
+  async openWorkspace(
+    handle?: FileSystemDirectoryHandle,
+    forcePicker = false,
+  ): Promise<void> {
     try {
-      let root = handle ?? (await loadHandle());
-      if (!root) {
+      let root = handle ?? await loadHandle();
+      if (forcePicker || !root) {
         root = await pickDirectory();
       } else {
         const permission = await root.requestPermission({ mode: 'readwrite' });
