@@ -48,9 +48,12 @@ export function CommandBar() {
   };
   const [historyOpen, setHistoryOpen] = useState(false);
   const closeHistory = () => setHistoryOpen(false);
+  const toggleEditor = () => {
+    workspace.editorVisible.value = !workspace.editorVisible.value;
+  };
   return (
     <header class="command-bar">
-      <span class="app-name">md_rw</span>
+      <span class="app-name">Pilcrow</span>
       <span class="save-status">{workspace.isDirty.value ? '● unsaved' : 'saved'}</span>
       <button
         class="nav-btn"
@@ -80,6 +83,13 @@ export function CommandBar() {
         aria-expanded={historyOpen}
       >
         History
+      </button>
+      <button
+        onClick={toggleEditor}
+        aria-label={workspace.editorVisible.value ? 'Preview' : 'Edit'}
+        aria-pressed={workspace.editorVisible.value}
+      >
+        {workspace.editorVisible.value ? 'Preview' : 'Edit'}
       </button>
       {historyOpen && <HistoryMenu onClose={closeHistory} />}
       {workspace.searchOpen.value && <SearchPanel />}

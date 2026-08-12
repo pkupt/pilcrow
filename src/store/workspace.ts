@@ -61,6 +61,7 @@ export const workspace = {
   searchOpen: signal<boolean>(false),
   searchResults: signal<SearchHit[]>([]),
   theme: signal<Theme>('light'),
+  editorVisible: signal<boolean>(true),
 
   // Overridable hooks for UI confirmation dialogs.
   confirmDirty: async (): Promise<ConfirmResult> => ConfirmResult.DISCARD,
@@ -369,4 +370,5 @@ export function resetWorkspace(): void {
   workspace.searchOpen.value = false;
   workspace.searchResults.value = [];
   workspace.theme.value = 'light';
+  workspace.editorVisible.value = true;
 }

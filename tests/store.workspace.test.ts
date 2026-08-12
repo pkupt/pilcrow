@@ -447,3 +447,17 @@ describe('workspace navigation history', () => {
     confirmSpy.mockRestore();
   });
 });
+
+describe('workspace.editorVisible', () => {
+  it('defaults to true', () => {
+    resetWorkspace();
+    expect(workspace.editorVisible.value).toBe(true);
+  });
+
+  it('resetWorkspace restores editorVisible to true', () => {
+    resetWorkspace();
+    workspace.editorVisible.value = false;
+    resetWorkspace();
+    expect(workspace.editorVisible.value).toBe(true);
+  });
+});
