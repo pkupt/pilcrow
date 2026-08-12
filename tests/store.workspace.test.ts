@@ -342,3 +342,108 @@ describe('workspace.saveCurrent conflict detection', () => {
     conflictSpy.mockRestore();
   });
 });
+
+describe('workspace navigation history', () => {
+  it('seeds history on first open', async () => {
+    await setup({ 'a.md': 'a' });
+    await workspace.openFile('a.md');
+    expect(workspace.navHistory.value).toEqual(['a.md']);
+    expect(workspace.navIndex.value).toBe(0);
+  });
+
+  it('appends distinct opens and dedups', async () => {
+    await setup({ 'a.md': 'a', 'b.md': 'b' });
+    await workspace.openFile('a.md');
+    await workspace.openFile('b.md');
+    await workspace.openFile('a.md');
+    expect(workspace.navHistory.value).toEqual(['a.md', 'b.md']);
+    expect(workspace.navIndex.value).toBe(0); // a.md is current again
+  });
+
+  it('goBack moves backward and goForward moves forward', async () => {
+    await setup({ 'a.md': 'a', 'b.md': 'b', 'c.md': 'c' });
+    await workspace.openFile('a.md');
+    await workspace.openFile('b.md');
+    await workspace.openFile('c.md');
+    await workspace.goBack();
+    expect(workspace.openFilePath.value).toBe('b.md');
+    await workspace.goBack();
+    expect(workspace.openFilePath.value).toBe('a.md');
+    await workspace.goForward();
+    expect(workspace.openFilePath.value).toBe('b.md');
+  });
+
+  it('goBack clamps at the first entry', async () => {
+    await setup({ 'a.md': 'a', 'b.md': 'b' });
+    await workspace.openFile('a.md');
+    await workspace.openFile('b.md');
+    await workspace.goBack();
+    await workspace.goBack();
+    expect(workspace.openFilePath.value).toBe('a.md');
+    expect(workspace.canGoBack()).toBe(false);
+  });
+
+  it('goForward clamps at the last entry', async () => {
+    await setup({ 'a.md': 'a', 'b.md': 'b' });
+    await workspace.openFile('a.md');
+    await workspace.openFile('b.md');
+    await workspace.goForward();
+    expect(workspace.openFilePath.value).toBe('b.md');
+    expect(workspace.canGoForward()).toBe(false);
+  });
+
+  it('back then opening a new file truncates the forward stack', async () => {
+    await setup({ 'a.md': 'a', 'b.md': 'b', 'c.md': 'c' });
+    await workspace.openFile('a.md');
+    await workspace.openFile('b.md');
+    await workspace.openFile('c.md');
+    await workspace.goBack();
+    await workspace.openFile('new.md');
+    expect(workspace.navHistory.value).toEqual(['a.md', 'b.md', 'new.md']);
+    expect(workspace.navIndex.value).toBe(2);
+    expect(workspace.canGoForward()).toBe(false);
+  });
+
+  it('jumping to an earlier file truncates then re-appends it', async () => {
+    await setup({ 'a.md': 'a', 'b.md': 'b', 'c.md': 'c' });
+    await workspace.openFile('a.md');
+    await workspace.openFile('b.md');
+    await workspace.openFile('c.md');
+    await workspace.goBack(); // now on b.md, navIndex 1
+    await workspace.openFile('b.md'); // re-open current -> no-op
+    expect(workspace.navHistory.value).toEqual(['a.md', 'b.md', 'c.md']);
+    expect(workspace.navIndex.value).toBe(1);
+  });
+
+  it('does not record history when reopening the current file', async () => {
+    await setup({ 'a.md': 'a', 'b.md': 'b' });
+    await workspace.openFile('a.md');
+    await workspace.openFile('a.md');
+    expect(workspace.navHistory.value).toEqual(['a.md']);
+    expect(workspace.navIndex.value).toBe(0);
+  });
+
+  it('resetWorkspace clears navigation history', async () => {
+    await setup({ 'a.md': 'a', 'b.md': 'b' });
+    await workspace.openFile('a.md');
+    await workspace.openFile('b.md');
+    resetWorkspace();
+    expect(workspace.navHistory.value).toEqual([]);
+    expect(workspace.navIndex.value).toBe(-1);
+    expect(workspace.canGoBack()).toBe(false);
+    expect(workspace.canGoForward()).toBe(false);
+  });
+
+  it('goBack/goForward prompt for dirty edits like openFile', async () => {
+    await setup({ 'a.md': 'a', 'b.md': 'b' });
+    await workspace.openFile('a.md');
+    await workspace.openFile('b.md');
+    workspace.openFileContent.value = 'dirty';
+    workspace.isDirty.value = true;
+    const confirmSpy = vi.spyOn(workspace, 'confirmDirty').mockResolvedValue(ConfirmResult.CANCEL);
+    await workspace.goBack();
+    expect(workspace.openFilePath.value).toBe('b.md'); // unchanged, cancelled
+    expect(workspace.navIndex.value).toBe(1); // navIndex untouched
+    confirmSpy.mockRestore();
+  });
+});

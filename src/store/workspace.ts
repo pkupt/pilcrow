@@ -56,6 +56,8 @@ export const workspace = {
   openFileMtime: signal<number>(0),
   isDirty: signal<boolean>(false),
   recentFiles: signal<string[]>([]),
+  navHistory: signal<string[]>([]),
+  navIndex: signal<number>(-1),
   searchOpen: signal<boolean>(false),
   searchResults: signal<SearchHit[]>([]),
   theme: signal<Theme>('light'),
@@ -88,6 +90,8 @@ export const workspace = {
       workspace.openFilePath.value = null;
       workspace.openFileContent.value = null;
       workspace.isDirty.value = false;
+      workspace.navHistory.value = [];
+      workspace.navIndex.value = -1;
     } catch (e) {
       const name = (e as DOMException | undefined)?.name;
       if (name === 'NotAllowedError' || name === 'SecurityError') {
@@ -97,6 +101,8 @@ export const workspace = {
         workspace.openFilePath.value = null;
         workspace.openFileContent.value = null;
         workspace.isDirty.value = false;
+        workspace.navHistory.value = [];
+        workspace.navIndex.value = -1;
         return;
       }
       if (name === 'AbortError') return; // user cancelled the directory picker
@@ -110,15 +116,45 @@ export const workspace = {
     await workspace.openWorkspace(workspace.directoryHandle.value ?? undefined);
   },
 
+  canGoBack(): boolean {
+    return workspace.navIndex.value > 0;
+  },
+
+  canGoForward(): boolean {
+    return workspace.navIndex.value < workspace.navHistory.value.length - 1;
+  },
+
   async openFile(path: string): Promise<void> {
-    if (workspace.directoryHandle.value === null) return;
+    await workspace.openFileInternal(path, true);
+  },
+
+  async openFileInternal(path: string, recordHistory: boolean): Promise<boolean> {
+    if (workspace.directoryHandle.value === null) return false;
     if (workspace.isDirty.value && workspace.openFilePath.value !== null) {
       const result = toConfirmResult(await workspace.confirmDirty());
-      if (result === ConfirmResult.CANCEL) return;
+      if (result === ConfirmResult.CANCEL) return false;
       if (result === ConfirmResult.SAVE) await workspace.saveCurrent();
     }
     const content = await readFile(workspace.directoryHandle.value!, path);
-    if (content === null) return;
+    if (recordHistory) {
+      const hist = workspace.navHistory.value;
+      const idx = workspace.navIndex.value;
+      if (hist.length === 0) {
+        workspace.navHistory.value = [path];
+        workspace.navIndex.value = 0;
+      } else if (hist[idx] !== path) {
+        const existing = hist.indexOf(path);
+        if (existing !== -1) {
+          workspace.navIndex.value = existing;
+        } else {
+          const truncated = hist.slice(0, idx + 1);
+          truncated.push(path);
+          workspace.navHistory.value = truncated;
+          workspace.navIndex.value = truncated.length - 1;
+        }
+      }
+    }
+    if (content === null) return false;
     const mtime = await getFileMtime(workspace.directoryHandle.value!, path);
     workspace.openFilePath.value = path;
     workspace.openFileContent.value = content;
@@ -126,6 +162,26 @@ export const workspace = {
     workspace.isDirty.value = false;
     workspace.recentFiles.value = [path, ...workspace.recentFiles.value.filter((p) => p !== path)].slice(0, 20);
     persistSettings();
+    return true;
+  },
+
+  async goBack(): Promise<void> {
+    const idx = workspace.navIndex.value;
+    if (idx <= 0) return;
+    const target = workspace.navHistory.value[idx - 1];
+    if (await workspace.openFileInternal(target, false)) {
+      workspace.navIndex.value = idx - 1;
+    }
+  },
+
+  async goForward(): Promise<void> {
+    const idx = workspace.navIndex.value;
+    const hist = workspace.navHistory.value;
+    if (idx < 0 || idx >= hist.length - 1) return;
+    const target = hist[idx + 1];
+    if (await workspace.openFileInternal(target, false)) {
+      workspace.navIndex.value = idx + 1;
+    }
   },
 
   setContent(content: string): void {
@@ -308,6 +364,8 @@ export function resetWorkspace(): void {
   workspace.openFileMtime.value = 0;
   workspace.isDirty.value = false;
   workspace.recentFiles.value = [];
+  workspace.navHistory.value = [];
+  workspace.navIndex.value = -1;
   workspace.searchOpen.value = false;
   workspace.searchResults.value = [];
   workspace.theme.value = 'light';
