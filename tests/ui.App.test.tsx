@@ -221,6 +221,23 @@ describe('App', () => {
     expect(workspace.openFilePath.value).toBe('a.md');
     expect(workspace.openFileContent.value).toBe('# hello');
   });
+
+  it('preview pane takes full remaining width when editor hidden', async () => {
+    resetWorkspace();
+    workspace.editorVisible.value = false;
+    const { container } = render(<App />);
+    const preview = container.querySelector('[data-pane="preview"]') as HTMLElement;
+    expect(preview.style.flex).toMatch(/^1 1 0/);
+    expect(container.querySelector('[data-pane="editor"]')).toBeFalsy();
+    expect(container.querySelector('[data-resize="editor"]')).toBeFalsy();
+  });
+
+  it('editor pane renders when editorVisible is true', () => {
+    resetWorkspace();
+    const { container } = render(<App />);
+    expect(container.querySelector('[data-pane="editor"]')).toBeTruthy();
+    expect(container.querySelector('[data-resize="editor"]')).toBeTruthy();
+  });
 });
 
 function firePointerDrag(el: HTMLElement, dx: number): void {
