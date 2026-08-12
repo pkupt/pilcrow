@@ -1,6 +1,6 @@
 import type { FileNode } from '../types';
 
-const DB_NAME = 'md_rw';
+const DB_NAME = 'pilcrow';
 const STORE_NAME = 'handles';
 const KEY = 'root_directory';
 

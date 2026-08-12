@@ -33,7 +33,7 @@ describe('settings persistence', () => {
   });
 
   it('returns defaults for corrupt storage', () => {
-    localStorage.setItem('md_rw_settings', '{not json');
+    localStorage.setItem('pilcrow_settings', '{not json');
     expect(loadSettings()).toEqual(DEFAULT_SETTINGS);
   });
 
