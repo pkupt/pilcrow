@@ -9,7 +9,7 @@ describe('App', () => {
   it('renders the top bar with workspace name', () => {
     resetWorkspace();
     render(<App />);
-    expect(screen.getByText(/md_rw/i)).toBeTruthy();
+    expect(screen.getByText(/pilcrow/i)).toBeTruthy();
   });
 
   it('renders three pane slots', () => {
@@ -184,6 +184,42 @@ describe('App', () => {
     render(<App />);
     screen.getByRole('button', { name: /history/i }).click();
     expect(await screen.findByText(/no history/i)).toBeTruthy();
+  });
+
+  it('Preview toggle hides the editor pane and shows full-width preview', async () => {
+    resetWorkspace();
+    const { container } = render(<App />);
+    expect(container.querySelector('[data-pane="editor"]')).toBeTruthy();
+    screen.getByRole('button', { name: /preview/i }).click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(container.querySelector('[data-pane="editor"]')).toBeFalsy();
+    expect(container.querySelector('[data-resize="editor"]')).toBeFalsy();
+    const preview = container.querySelector('[data-pane="preview"]') as HTMLElement;
+    expect(preview.style.flex).toMatch(/^1 1 0/);
+  });
+
+  it('Edit toggle brings the editor pane back and restores the split ratio', async () => {
+    resetWorkspace();
+    const { container } = render(<App />);
+    screen.getByRole('button', { name: /preview/i }).click();
+    await new Promise((r) => setTimeout(r, 0));
+    screen.getByRole('button', { name: /edit/i }).click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(container.querySelector('[data-pane="editor"]')).toBeTruthy();
+    expect(container.querySelector('[data-resize="editor"]')).toBeTruthy();
+    const preview = container.querySelector('[data-pane="preview"]') as HTMLElement;
+    expect(preview.style.flex).toMatch(/^0\.5 1 0/);
+  });
+
+  it('toggling to preview keeps the open file and content', async () => {
+    resetWorkspace();
+    workspace.openFilePath.value = 'a.md';
+    workspace.openFileContent.value = '# hello';
+    render(<App />);
+    screen.getByRole('button', { name: /preview/i }).click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(workspace.openFilePath.value).toBe('a.md');
+    expect(workspace.openFileContent.value).toBe('# hello');
   });
 });
 

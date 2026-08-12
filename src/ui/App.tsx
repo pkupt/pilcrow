@@ -67,18 +67,24 @@ export function App() {
             <FileTree />
           </aside>
           <div class="resizer" data-resize="tree" onPointerDown={startTreeDrag} />
-          <section
-            class="pane editor-pane"
-            data-pane="editor"
-            style={{ flex: `${editorWidth.value} 1 0` }}
-          >
-            <EditorPane />
-          </section>
-          <div class="resizer" data-resize="editor" onPointerDown={startEditorDrag} />
+          {workspace.editorVisible.value && (
+            <>
+              <section
+                class="pane editor-pane"
+                data-pane="editor"
+                style={{ flex: `${editorWidth.value} 1 0` }}
+              >
+                <EditorPane />
+              </section>
+              <div class="resizer" data-resize="editor" onPointerDown={startEditorDrag} />
+            </>
+          )}
           <section
             class="pane preview-pane"
             data-pane="preview"
-            style={{ flex: `${1 - editorWidth.value} 1 0` }}
+            style={workspace.editorVisible.value
+              ? { flex: `${1 - editorWidth.value} 1 0` }
+              : { flex: '1 1 0' }}
           >
             <PreviewPane />
           </section>
@@ -87,7 +93,7 @@ export function App() {
           <div class="regrant-overlay">
             <div class="regrant-card">
               <h1>Folder access required</h1>
-              <p>md_rw could not access your folder. Re-grant permission to continue.</p>
+              <p>Pilcrow could not access your folder. Re-grant permission to continue.</p>
               <button onClick={() => void workspace.reGrantAccess()}>Re-grant access</button>
             </div>
           </div>
