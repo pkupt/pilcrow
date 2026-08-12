@@ -6,3 +6,6 @@ dist/
 .vscode/
 .idea/
 .superpowers/
+
+# Local-only debug harnesses (hard-code machine paths)
+debug-*.mjs
