@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "md_rw",
-  "version": "0.1.0",
+  "name": "Pilcrow",
+  "version": "0.2.0",
   "description": "Read and write local Markdown folders in your browser.",
   "action": {
-    "default_title": "md_rw"
+    "default_title": "Pilcrow"
   },
   "background": {
     "service_worker": "background.js"

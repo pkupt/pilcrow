@@ -1,6 +1,6 @@
 import type { Theme } from '../types';
 
-const STORAGE_KEY = 'md_rw_settings';
+const STORAGE_KEY = 'pilcrow_settings';
 
 export interface Settings {
   recentFiles: string[];
