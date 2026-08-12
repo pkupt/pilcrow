@@ -76,6 +76,7 @@ describe('workspace.openWorkspace permission failures', () => {
     resetWorkspace();
     const dirMod = await import('../src/fs/directory');
     const loadSpy = vi.spyOn(dirMod, 'loadHandle').mockResolvedValue({
+      requestPermission: async (): Promise<PermissionState> => 'granted',
       values: () => {
         throw new DOMException('denied', 'NotAllowedError');
       },
@@ -84,6 +85,45 @@ describe('workspace.openWorkspace permission failures', () => {
     expect(workspace.directoryHandle.value).toBeNull();
     expect(workspace.permissionError.value).toBe(true);
     loadSpy.mockRestore();
+  });
+});
+
+describe('workspace permission re-grant', () => {
+  it('requests readwrite permission for a persisted handle on open', async () => {
+    const fs = createMockFs({ 'a.md': 'a' });
+    const permSpy = vi.spyOn(fs.handle, 'requestPermission');
+    resetWorkspace();
+    await workspace.openWorkspace(fs.handle);
+    expect(permSpy).toHaveBeenCalledWith({ mode: 'readwrite' });
+    permSpy.mockRestore();
+  });
+
+  it('falls back to the directory picker when permission is denied', async () => {
+    const fs = createMockFs({ 'a.md': 'a' });
+    const dirMod = await import('../src/fs/directory');
+    const pickSpy = vi.spyOn(dirMod, 'pickDirectory').mockResolvedValue(fs.handle);
+    const permSpy = vi.spyOn(fs.handle, 'requestPermission').mockResolvedValue('denied');
+    resetWorkspace();
+    await workspace.openWorkspace(fs.handle);
+    expect(pickSpy).toHaveBeenCalled();
+    expect(workspace.permissionError.value).toBe(false);
+    expect(workspace.tree.value.map((n) => n.path)).toEqual(['a.md']);
+    pickSpy.mockRestore();
+    permSpy.mockRestore();
+  });
+
+  it('reGrantAccess re-requests permission and loads the workspace', async () => {
+    const fs = createMockFs({ 'a.md': 'a' });
+    const dirMod = await import('../src/fs/directory');
+    const loadSpy = vi.spyOn(dirMod, 'loadHandle').mockResolvedValue(fs.handle);
+    const permSpy = vi.spyOn(fs.handle, 'requestPermission').mockResolvedValue('granted');
+    resetWorkspace();
+    await workspace.reGrantAccess();
+    expect(permSpy).toHaveBeenCalledWith({ mode: 'readwrite' });
+    expect(workspace.permissionError.value).toBe(false);
+    expect(workspace.tree.value.map((n) => n.path)).toEqual(['a.md']);
+    loadSpy.mockRestore();
+    permSpy.mockRestore();
   });
 });
 
@@ -126,6 +166,20 @@ describe('workspace.openFile', () => {
     const confirmSpy = vi.spyOn(workspace, 'confirmDirty').mockResolvedValue(ConfirmResult.CANCEL);
     await workspace.openFile('b.md');
     expect(workspace.openFilePath.value).toBe('a.md');
+    confirmSpy.mockRestore();
+  });
+
+  it('treats an unrecognized confirmDirty result (backdrop dismiss) as cancel', async () => {
+    await setup({ 'a.md': 'a', 'b.md': 'b' });
+    await workspace.openFile('a.md');
+    workspace.openFileContent.value = 'modified';
+    workspace.isDirty.value = true;
+    const confirmSpy = vi
+      .spyOn(workspace, 'confirmDirty')
+      .mockResolvedValue('' as ConfirmResult);
+    await workspace.openFile('b.md');
+    expect(workspace.openFilePath.value).toBe('a.md');
+    expect(workspace.openFileContent.value).toBe('modified');
     confirmSpy.mockRestore();
   });
 });
@@ -202,6 +256,20 @@ describe('workspace.moveDirectory', () => {
     await workspace.moveDirectory('src', 'notes/dst');
     expect(workspace.tree.value).toEqual([]);
   });
+
+  it('rewrites openFilePath when the open file is inside the moved directory', async () => {
+    await setup({ 'src/a.md': 'A' });
+    await workspace.openFile('src/a.md');
+    await workspace.moveDirectory('src', 'notes/dst');
+    expect(workspace.openFilePath.value).toBe('notes/dst/a.md');
+  });
+
+  it('updates relative links to files inside the moved directory', async () => {
+    const fs = await setup({ 'src/a.md': 'A', 'dst.md': '[see](./src/a.md)' });
+    vi.spyOn(workspace, 'confirmReferences').mockResolvedValue(true);
+    await workspace.moveDirectory('src', 'notes/dst');
+    expect(fs.files.get('dst.md')).toContain('./notes/dst/a.md');
+  });
 });
 
 describe('workspace.runSearch', () => {
@@ -254,6 +322,23 @@ describe('workspace.saveCurrent conflict detection', () => {
     const conflictSpy = vi.spyOn(workspace, 'confirmConflict').mockResolvedValue(ConflictResult.OVERWRITE);
     await workspace.saveCurrent();
     expect(workspace.openFileContent.value).toContain('external change');
+    conflictSpy.mockRestore();
+  });
+
+  it('treats an unrecognized confirmConflict result (backdrop dismiss) as cancel', async () => {
+    const fs = await setup({ 'a.md': 'old' });
+    await workspace.openFile('a.md');
+    fs.files.set('a.md', 'external change');
+    fs.mtimes.set('a.md', 999);
+    workspace.openFileContent.value = 'local change';
+    workspace.isDirty.value = true;
+    const conflictSpy = vi
+      .spyOn(workspace, 'confirmConflict')
+      .mockResolvedValue('' as ConflictResult);
+    await workspace.saveCurrent();
+    expect(fs.files.get('a.md')).toBe('external change');
+    expect(workspace.openFileContent.value).toBe('local change');
+    expect(workspace.isDirty.value).toBe(true);
     conflictSpy.mockRestore();
   });
 });

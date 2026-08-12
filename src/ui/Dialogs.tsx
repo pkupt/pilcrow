@@ -14,21 +14,35 @@ export interface DialogState {
 
 export const dialogState = signal<DialogState | null>(null);
 
-let resolver: ((value: string) => void) | null = null;
+interface PendingDialog {
+  state: DialogState;
+  resolve: (value: string) => void;
+}
+
+const pending: PendingDialog[] = [];
+let current: PendingDialog | null = null;
 
 export function askDialog(state: DialogState): Promise<string> {
-  dialogState.value = state;
   return new Promise((resolve) => {
-    resolver = resolve;
+    pending.push({ state, resolve });
+    showNext();
   });
 }
 
+function showNext(): void {
+  if (current !== null || pending.length === 0) return;
+  current = pending.shift()!;
+  dialogState.value = current.state;
+}
+
 export function closeDialog(value: string): void {
-  dialogState.value = null;
-  if (resolver) {
-    resolver(value);
-    resolver = null;
+  const next = current;
+  current = null;
+  if (next !== null) {
+    dialogState.value = null;
+    next.resolve(value);
   }
+  showNext();
 }
 
 export function DialogHost() {

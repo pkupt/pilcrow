@@ -30,6 +30,23 @@ export enum ConfirmResult {
   MANUAL_MERGE = 'manual_merge', // for conflict
 }
 
+// Any unrecognized value (e.g. '' from a backdrop dismiss) is treated as CANCEL so
+// no flow proceeds to a switch/overwrite with an unknown result.
+function toConfirmResult(value: unknown): ConfirmResult {
+  const v = value as string;
+  switch (v) {
+    case ConfirmResult.SAVE:
+    case ConfirmResult.DISCARD:
+    case ConfirmResult.CANCEL:
+    case ConfirmResult.KEEP_LOCAL:
+    case ConfirmResult.OVERWRITE:
+    case ConfirmResult.MANUAL_MERGE:
+      return v;
+    default:
+      return ConfirmResult.CANCEL;
+  }
+}
+
 export const workspace = {
   directoryHandle: signal<FileSystemDirectoryHandle | null>(null),
   permissionError: signal<boolean>(false),
@@ -54,6 +71,12 @@ export const workspace = {
       let root = handle ?? (await loadHandle());
       if (!root) {
         root = await pickDirectory();
+      } else {
+        const permission = await root.requestPermission({ mode: 'readwrite' });
+        if (permission === 'denied') {
+          // A persisted handle with revoked permission cannot be used; fall back to the picker.
+          root = await pickDirectory();
+        }
       }
       workspace.permissionError.value = false;
       await persistHandle(root);
@@ -78,10 +101,16 @@ export const workspace = {
     }
   },
 
+  // Re-ask for permission on the current/persisted handle and reopen the workspace.
+  // If the persisted handle is still denied, openWorkspace falls back to the picker.
+  async reGrantAccess(): Promise<void> {
+    await workspace.openWorkspace(workspace.directoryHandle.value ?? undefined);
+  },
+
   async openFile(path: string): Promise<void> {
     if (workspace.directoryHandle.value === null) return;
     if (workspace.isDirty.value && workspace.openFilePath.value !== null) {
-      const result = await workspace.confirmDirty();
+      const result = toConfirmResult(await workspace.confirmDirty());
       if (result === ConfirmResult.CANCEL) return;
       if (result === ConfirmResult.SAVE) await workspace.saveCurrent();
     }
@@ -110,7 +139,7 @@ export const workspace = {
     if (workspace.directoryHandle.value === null) return;
     const diskMtime = await getFileMtime(workspace.directoryHandle.value!, path);
     if (diskMtime !== null && workspace.openFileMtime.value !== 0 && diskMtime !== workspace.openFileMtime.value) {
-      const choice = await workspace.confirmConflict();
+      const choice = toConfirmResult(await workspace.confirmConflict());
       if (choice === ConfirmResult.CANCEL) return;
       if (choice === ConfirmResult.OVERWRITE) {
         const diskContent = await readFile(workspace.directoryHandle.value!, path);
@@ -196,7 +225,32 @@ export const workspace = {
 
   async moveDirectory(srcPath: string, destPath: string): Promise<void> {
     if (workspace.directoryHandle.value === null) return;
+    const tree = workspace.tree.value;
+    const edits = await updateReferences(
+      tree,
+      srcPath,
+      destPath,
+      (p) => readFile(workspace.directoryHandle.value!, p),
+    );
+    if (edits.length > 0) {
+      const summary = edits.map((e) => ({ path: e.path, count: e.replacements.length }));
+      const confirmed = await workspace.confirmReferences(summary);
+      if (!confirmed) return;
+      for (const edit of edits) {
+        const content = await readFile(workspace.directoryHandle.value!, edit.path);
+        if (content === null) continue;
+        let updated = content;
+        for (const r of edit.replacements) {
+          updated = updated.split(r.match).join(r.replace);
+        }
+        await writeFile(workspace.directoryHandle.value!, edit.path, updated);
+      }
+    }
     await fsMoveDirectory(workspace.directoryHandle.value!, srcPath, destPath);
+    const open = workspace.openFilePath.value;
+    if (open !== null && (open === srcPath || open.startsWith(srcPath + '/'))) {
+      workspace.openFilePath.value = destPath + open.slice(srcPath.length);
+    }
     await refreshTree();
   },
 

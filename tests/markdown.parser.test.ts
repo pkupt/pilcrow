@@ -80,4 +80,12 @@ describe('parser', () => {
     const html = parse('# 笔记');
     expect(html).toMatch(/id="[^"]*[\u4e00-\u9fff][^"]*"/);
   });
+
+  it('produces non-empty unique ids for punctuation-only headings', () => {
+    const html = parse('# !!!\n\n# ???');
+    const ids = [...html.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toHaveLength(2);
+    expect(ids.every((id) => id.length > 0)).toBe(true);
+    expect(new Set(ids).size).toBe(2);
+  });
 });

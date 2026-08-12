@@ -484,3 +484,78 @@
   --hover: #2a2d2e;
   --danger: #f14c4c;
 }
+
+/* Code blocks: the bundled light-only highlight.js theme renders dark text on the
+   dark panel. Override the container and token colors with the github-dark palette
+   when the shell is in dark mode. */
+.app-shell[data-theme="dark"] .preview-pane-content .hljs {
+  color: #c9d1d9;
+  background: #0d1117;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-doctag,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-keyword,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-meta .hljs-keyword,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-template-tag,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-template-variable,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-type,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-variable.language_ {
+  color: #ff7b72;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-title,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-title.class_,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-title.class_.inherited__,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-title.function_ {
+  color: #d2a8ff;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-attr,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-attribute,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-literal,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-meta,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-number,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-operator,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-variable,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-selector-attr,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-selector-class,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-selector-id {
+  color: #79c0ff;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-regexp,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-string,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-meta .hljs-string {
+  color: #a5d6ff;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-built_in,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-symbol {
+  color: #ffa657;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-comment,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-code,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-formula {
+  color: #8b949e;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-name,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-quote,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-selector-tag,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-selector-pseudo {
+  color: #7ee787;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-subst,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-emphasis,
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-strong {
+  color: #c9d1d9;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-section {
+  color: #1f6feb;
+  font-weight: bold;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-bullet {
+  color: #f2cc60;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-addition {
+  color: #aff5b4;
+  background-color: #033a16;
+}
+.app-shell[data-theme="dark"] .preview-pane-content .hljs-deletion {
+  color: #ffdcd7;
+  background-color: #67060c;
+}
