@@ -1,15 +1,17 @@
-import type { Theme } from '../types';
+import type { Theme, FileSortKind } from '../types';
 
 const STORAGE_KEY = 'pilcrow_settings';
 
 export interface Settings {
   recentFiles: string[];
   theme: Theme;
+  fileSort: FileSortKind;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   recentFiles: [],
   theme: 'light',
+  fileSort: 'name',
 };
 
 export function loadSettings(): Settings {
@@ -20,6 +22,7 @@ export function loadSettings(): Settings {
     return {
       recentFiles: Array.isArray(parsed.recentFiles) ? parsed.recentFiles : [],
       theme: parsed.theme === 'dark' ? 'dark' : 'light',
+      fileSort: parsed.fileSort === 'mtime' || parsed.fileSort === 'none' ? parsed.fileSort : 'name',
     };
   } catch {
     return { ...DEFAULT_SETTINGS };
