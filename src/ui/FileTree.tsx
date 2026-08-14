@@ -1,6 +1,7 @@
 import { useSignal } from '@preact/signals';
-import type { FileNode } from '../types';
+import type { FileNode, FileSortKind } from '../types';
 import { workspace } from '../store/workspace';
+import { sortChildren } from './sortTree';
 
 interface TreeNode extends FileNode {
   depth: number;
@@ -28,6 +29,16 @@ function buildTree(nodes: FileNode[]): TreeNode[] {
   return roots;
 }
 
+function sortTreeNodes(nodes: TreeNode[], kind: FileSortKind): TreeNode[] {
+  const out = sortChildren(nodes, kind) as TreeNode[];
+  for (const n of out) {
+    if (n.children) {
+      n.children = sortTreeNodes(n.children, kind);
+    }
+  }
+  return out;
+}
+
 function flatten(nodes: TreeNode[], expanded: Set<string>, depth = 0): TreeNode[] {
   const out: TreeNode[] = [];
   for (const node of nodes) {
@@ -49,7 +60,8 @@ export function FileTree() {
   const contextMenu = useSignal<{ path: string; x: number; y: number } | null>(null);
 
   const tree = workspace.tree.value;
-  const flat = flatten(buildTree(tree), expanded.value);
+  const roots = sortTreeNodes(buildTree(tree), workspace.fileSort.value);
+  const flat = flatten(roots, expanded.value);
   const noHandle = workspace.directoryHandle.value === null;
 
   const handleSelectFolder = () => {

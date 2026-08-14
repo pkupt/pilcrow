@@ -58,3 +58,40 @@ describe('FileTree', () => {
     delSpy.mockRestore();
   });
 });
+
+describe('FileTree sorting', () => {
+  it('renders by name with folders first when fileSort is name', () => {
+    workspace.fileSort.value = 'name';
+    workspace.tree.value = [
+      node('z.md'),
+      node('assets', 'directory'),
+      node('a.md'),
+      node('m.md'),
+    ];
+    render(<FileTree />);
+    const names = [...document.querySelectorAll('.file-tree-item .node-name')].map((e) => e.textContent);
+    expect(names).toEqual(['assets', 'a.md', 'm.md', 'z.md']);
+  });
+
+  it('renders by mtime newest first when fileSort is mtime', () => {
+    workspace.fileSort.value = 'mtime';
+    workspace.tree.value = [
+      node('old.md', 'file'),
+      node('new.md', 'file'),
+      node('mid.md', 'file'),
+    ];
+    // Set distinct mtimes after building the list:
+    workspace.tree.value = workspace.tree.value.map((n, i) => ({ ...n, mtime: [100, 300, 200][i] }));
+    render(<FileTree />);
+    const names = [...document.querySelectorAll('.file-tree-item .node-name')].map((e) => e.textContent);
+    expect(names).toEqual(['new.md', 'mid.md', 'old.md']);
+  });
+
+  it('renders unsorted in original order when fileSort is none', () => {
+    workspace.fileSort.value = 'none';
+    workspace.tree.value = [node('z.md'), node('a.md'), node('m.md')];
+    render(<FileTree />);
+    const names = [...document.querySelectorAll('.file-tree-item .node-name')].map((e) => e.textContent);
+    expect(names).toEqual(['z.md', 'a.md', 'm.md']);
+  });
+});
