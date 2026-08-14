@@ -264,6 +264,25 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /by name/i }).getAttribute('aria-pressed')).toBe('true');
     expect(screen.getByRole('button', { name: /unsorted/i }).getAttribute('aria-pressed')).toBe('false');
   });
+
+  it('re-sorts the rendered tree reactively when the sort mode changes', async () => {
+    resetWorkspace();
+    workspace.tree.value = [
+      { path: 'z.md', name: 'z.md', kind: 'file', size: 0, mtime: 300 },
+      { path: 'a.md', name: 'a.md', kind: 'file', size: 0, mtime: 200 },
+      { path: 'm.md', name: 'm.md', kind: 'file', size: 0, mtime: 100 },
+    ];
+    render(<App />);
+    const names = () =>
+      [...document.querySelectorAll('.file-tree-item .node-name')].map((e) => e.textContent);
+    expect(names()).toEqual(['a.md', 'm.md', 'z.md']);
+    screen.getByRole('button', { name: /sort/i }).click();
+    await screen.findByTestId('sort-menu');
+    screen.getByRole('button', { name: /by modified time/i }).click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(workspace.fileSort.value).toBe('mtime');
+    expect(names()).toEqual(['z.md', 'a.md', 'm.md']);
+  });
 });
 
 function firePointerDrag(el: HTMLElement, dx: number): void {
