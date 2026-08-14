@@ -1,5 +1,5 @@
 import { signal } from '@preact/signals';
-import type { FileNode, SearchHit, Theme } from '../types';
+import type { FileNode, SearchHit, Theme, FileSortKind } from '../types';
 import {
   listTree,
   loadHandle,
@@ -61,6 +61,7 @@ export const workspace = {
   searchOpen: signal<boolean>(false),
   searchResults: signal<SearchHit[]>([]),
   theme: signal<Theme>('light'),
+  fileSort: signal<FileSortKind>('name'),
   editorVisible: signal<boolean>(true),
 
   // Overridable hooks for UI confirmation dialogs.
@@ -334,16 +335,26 @@ export const workspace = {
     workspace.theme.value = theme;
     persistSettings();
   },
+
+  setFileSort(kind: FileSortKind): void {
+    workspace.fileSort.value = kind;
+    persistSettings();
+  },
 };
 
 function persistSettings(): void {
-  saveSettings({ recentFiles: workspace.recentFiles.value, theme: workspace.theme.value });
+  saveSettings({
+    recentFiles: workspace.recentFiles.value,
+    theme: workspace.theme.value,
+    fileSort: workspace.fileSort.value,
+  });
 }
 
 export function initWorkspace(): void {
   const settings = loadSettings();
   workspace.recentFiles.value = settings.recentFiles;
   workspace.theme.value = settings.theme;
+  workspace.fileSort.value = settings.fileSort;
 }
 
 async function refreshTree(): Promise<void> {
@@ -370,5 +381,6 @@ export function resetWorkspace(): void {
   workspace.searchOpen.value = false;
   workspace.searchResults.value = [];
   workspace.theme.value = 'light';
+  workspace.fileSort.value = 'name';
   workspace.editorVisible.value = true;
 }

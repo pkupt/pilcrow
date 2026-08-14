@@ -26,7 +26,7 @@ describe('settings persistence', () => {
   });
 
   it('round-trips recentFiles and theme', () => {
-    saveSettings({ recentFiles: ['a.md', 'b.md'], theme: 'dark' });
+    saveSettings({ recentFiles: ['a.md', 'b.md'], theme: 'dark', fileSort: 'name' });
     const loaded = loadSettings();
     expect(loaded.recentFiles).toEqual(['a.md', 'b.md']);
     expect(loaded.theme).toBe('dark');
@@ -50,9 +50,30 @@ describe('settings persistence', () => {
   });
 
   it('initWorkspace applies persisted settings', () => {
-    saveSettings({ recentFiles: ['x.md'], theme: 'dark' });
+    saveSettings({ recentFiles: ['x.md'], theme: 'dark', fileSort: 'name' });
     initWorkspace();
     expect(workspace.theme.value).toBe('dark');
     expect(workspace.recentFiles.value).toEqual(['x.md']);
+  });
+
+  it('loadSettings falls back to name for an unknown fileSort value', () => {
+    saveSettings({ recentFiles: [], theme: 'light', fileSort: 'bogus' as never });
+    expect(loadSettings().fileSort).toBe('name');
+  });
+
+  it('round-trips fileSort through save/load', () => {
+    saveSettings({ recentFiles: [], theme: 'light', fileSort: 'mtime' });
+    expect(loadSettings().fileSort).toBe('mtime');
+  });
+
+  it('setFileSort persists the mode', () => {
+    workspace.setFileSort('none');
+    expect(loadSettings().fileSort).toBe('none');
+  });
+
+  it('initWorkspace applies the persisted fileSort', () => {
+    saveSettings({ recentFiles: [], theme: 'light', fileSort: 'mtime' });
+    initWorkspace();
+    expect(workspace.fileSort.value).toBe('mtime');
   });
 });
