@@ -94,4 +94,21 @@ describe('FileTree sorting', () => {
     const names = [...document.querySelectorAll('.file-tree-item .node-name')].map((e) => e.textContent);
     expect(names).toEqual(['z.md', 'a.md', 'm.md']);
   });
+
+  it('sorts nested levels recursively with folders first when expanded', () => {
+    workspace.fileSort.value = 'name';
+    workspace.tree.value = [
+      node('z.md'),
+      node('notes', 'directory'),
+      node('b.md'),
+      node('notes/x.md'),
+      node('notes/sub', 'directory'),
+      node('notes/a.md'),
+      node('notes/sub/deep.md'),
+    ];
+    render(<FileTree />);
+    fireEvent.click(screen.getByText('notes'));
+    const names = [...document.querySelectorAll('.file-tree-item .node-name')].map((e) => e.textContent);
+    expect(names).toEqual(['notes', 'sub', 'a.md', 'x.md', 'b.md', 'z.md']);
+  });
 });

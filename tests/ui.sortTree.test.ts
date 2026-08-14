@@ -39,6 +39,11 @@ describe('sortChildren', () => {
     expect(sortChildren(children, 'none').map(nodeName)).toEqual(['z.md', 'a.md', 'm.md']);
   });
 
+  it('preserves exact order for mixed files and directories when kind is none', () => {
+    const children = [node('z.md', 'file'), node('assets', 'directory'), node('a.md', 'file')];
+    expect(sortChildren(children, 'none').map(nodeName)).toEqual(['z.md', 'assets', 'a.md']);
+  });
+
   it('returns a new array (does not alias) for none', () => {
     const children = [node('same.md', 'file', 5), node('same.md', 'file', 9)];
     const result = sortChildren(children, 'none');

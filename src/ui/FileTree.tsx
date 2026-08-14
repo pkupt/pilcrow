@@ -30,7 +30,7 @@ function buildTree(nodes: FileNode[]): TreeNode[] {
 }
 
 function sortTreeNodes(nodes: TreeNode[], kind: FileSortKind): TreeNode[] {
-  const out = sortChildren(nodes, kind) as TreeNode[];
+  const out = sortChildren(nodes, kind);
   for (const n of out) {
     if (n.children) {
       n.children = sortTreeNodes(n.children, kind);

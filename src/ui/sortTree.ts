@@ -1,7 +1,7 @@
 import type { FileNode, FileSortKind } from '../types';
 
 export function compareBy(kind: FileSortKind, a: FileNode, b: FileNode): number {
-  if (a.kind !== b.kind) {
+  if (kind !== 'none' && a.kind !== b.kind) {
     return a.kind === 'directory' ? -1 : 1;
   }
   switch (kind) {
@@ -11,9 +11,11 @@ export function compareBy(kind: FileSortKind, a: FileNode, b: FileNode): number 
       return b.mtime - a.mtime;
     case 'none':
       return 0;
+    default:
+      throw new Error('unknown sort kind: ' + kind);
   }
 }
 
-export function sortChildren(children: FileNode[], kind: FileSortKind): FileNode[] {
+export function sortChildren<T extends FileNode>(children: T[], kind: FileSortKind): T[] {
   return children.slice().sort((a, b) => compareBy(kind, a, b));
 }
