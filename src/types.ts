@@ -1,5 +1,7 @@
 export type Theme = 'light' | 'dark';
 
+export type FileSortKind = 'name' | 'mtime' | 'none';
+
 export interface FileNode {
   path: string;
   name: string;
