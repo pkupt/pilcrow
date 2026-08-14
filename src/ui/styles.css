@@ -612,7 +612,7 @@
 .sort-menu {
   position: absolute;
   top: 42px;
-  right: 170px;
+  right: 88px;
   z-index: 60;
   min-width: 180px;
   background: var(--bg);
