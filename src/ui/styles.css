@@ -608,3 +608,40 @@
   color: var(--muted);
   font-size: 13px;
 }
+
+.sort-menu {
+  position: absolute;
+  top: 42px;
+  right: 170px;
+  z-index: 60;
+  min-width: 180px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+}
+
+.sort-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sort-list li button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.sort-list li button:hover {
+  background: var(--hover);
+}
