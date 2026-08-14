@@ -1,6 +1,13 @@
 import { useState } from 'preact/hooks';
 import { workspace, ConfirmResult } from '../store/workspace';
 import { SearchPanel } from './SearchPanel';
+import type { FileSortKind } from '../types';
+
+const SORT_MODES: Array<{ kind: FileSortKind; label: string }> = [
+  { kind: 'name', label: 'By name' },
+  { kind: 'mtime', label: 'By modified time' },
+  { kind: 'none', label: 'Unsorted' },
+];
 
 function HistoryMenu({ onClose }: { onClose: () => void }) {
   const openFile = (path: string) => {
@@ -22,6 +29,29 @@ function HistoryMenu({ onClose }: { onClose: () => void }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function SortMenu({ onClose }: { onClose: () => void }) {
+  const choose = (kind: FileSortKind) => {
+    workspace.setFileSort(kind);
+    onClose();
+  };
+  return (
+    <div class="sort-menu" data-testid="sort-menu">
+      <ul class="sort-list">
+        {SORT_MODES.map((m) => {
+          const active = workspace.fileSort.value === m.kind;
+          return (
+            <li key={m.kind}>
+              <button aria-pressed={active} onClick={() => choose(m.kind)}>
+                {active ? '✓ ' : ''}{m.label}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -48,6 +78,8 @@ export function CommandBar() {
   };
   const [historyOpen, setHistoryOpen] = useState(false);
   const closeHistory = () => setHistoryOpen(false);
+  const [sortOpen, setSortOpen] = useState(false);
+  const closeSort = () => setSortOpen(false);
   const toggleEditor = () => {
     workspace.editorVisible.value = !workspace.editorVisible.value;
   };
@@ -85,6 +117,13 @@ export function CommandBar() {
         History
       </button>
       <button
+        onClick={() => setSortOpen(!sortOpen)}
+        aria-label="Sort"
+        aria-expanded={sortOpen}
+      >
+        Sort
+      </button>
+      <button
         onClick={toggleEditor}
         aria-label={workspace.editorVisible.value ? 'Preview' : 'Edit'}
         aria-pressed={workspace.editorVisible.value}
@@ -92,6 +131,7 @@ export function CommandBar() {
         {workspace.editorVisible.value ? 'Preview' : 'Edit'}
       </button>
       {historyOpen && <HistoryMenu onClose={closeHistory} />}
+      {sortOpen && <SortMenu onClose={closeSort} />}
       {workspace.searchOpen.value && <SearchPanel />}
     </header>
   );

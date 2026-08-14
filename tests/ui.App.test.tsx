@@ -238,6 +238,32 @@ describe('App', () => {
     expect(container.querySelector('[data-pane="editor"]')).toBeTruthy();
     expect(container.querySelector('[data-resize="editor"]')).toBeTruthy();
   });
+
+  it('Sort menu opens, marks the active mode, and applies a selection', async () => {
+    resetWorkspace();
+    workspace.fileSort.value = 'name';
+    render(<App />);
+    screen.getByRole('button', { name: /sort/i }).click();
+    const menu = await screen.findByTestId('sort-menu');
+    expect(menu.textContent).toContain('By name');
+    expect(menu.textContent).toContain('By modified time');
+    expect(menu.textContent).toContain('Unsorted');
+    const nameItem = screen.getByRole('button', { name: /by name/i });
+    expect(nameItem.getAttribute('aria-pressed')).toBe('true');
+    screen.getByRole('button', { name: /by modified time/i }).click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(workspace.fileSort.value).toBe('mtime');
+    expect(screen.queryByTestId('sort-menu')).toBeFalsy();
+  });
+
+  it('By name is active by default when nothing set', async () => {
+    resetWorkspace();
+    render(<App />);
+    screen.getByRole('button', { name: /sort/i }).click();
+    await screen.findByTestId('sort-menu');
+    expect(screen.getByRole('button', { name: /by name/i }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: /unsorted/i }).getAttribute('aria-pressed')).toBe('false');
+  });
 });
 
 function firePointerDrag(el: HTMLElement, dx: number): void {
