@@ -1,6 +1,6 @@
 # Pilcrow
 
-在浏览器中直接读写本地 Markdown 文件夹的 Chrome 扩展(MV3)。
+A Chrome extension (MV3) to read/write local Markdown folders directly in the browser.
 
 ## 关于名字
 
